@@ -1,6 +1,15 @@
 [package]
+authors = ["rchaser53 <tayoshizawa29@gmail.com>"]
+cargo-features = ["edition"]
+edition = "2018"
 name = "rr-llvm-ir"
 version = "0.1.0"
-authors = ["rchaser53 <tayoshizawa29@gmail.com>"]
 
 [dependencies]
+clap = "2.32.0"
+lazy_static = "1.2.0"
+libc = "0.2.44"
+
+[dependencies.inkwell]
+branch = "llvm7-0"
+git = "https://github.com/TheDan64/inkwell"
