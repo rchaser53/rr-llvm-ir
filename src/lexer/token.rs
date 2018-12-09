@@ -49,10 +49,10 @@ pub enum TokenType {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PrimaryType {
-  Boolean,
-  Null,
-  String,
-  Integer,
+    Boolean,
+    Null,
+    String,
+    Integer,
 }
 
 #[derive(Clone, Debug)]

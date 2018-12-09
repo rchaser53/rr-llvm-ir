@@ -1,5 +1,7 @@
 #![feature(uniform_paths)]
 
+#[macro_use]
+extern crate lazy_static;
 extern crate clap;
 extern crate inkwell;
 extern crate libc;
@@ -11,6 +13,9 @@ use clap::{App, Arg};
 
 mod lexer;
 use lexer::lexer::*;
+
+mod parser;
+use parser::parser::*;
 
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";
@@ -40,6 +45,7 @@ fn main() {
     match read_file(input_file_name) {
         Ok(input) => {
             let mut lexer = Lexer::new(&input);
+            let mut parser = Parser::new(&mut lexer);
         }
         Err(error) => {
             panic!("{}", error);
