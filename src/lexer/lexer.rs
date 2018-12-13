@@ -4,6 +4,7 @@ use crate::lexer::token::*;
 pub struct Lexer<'a> {
     pub bytes: &'a [u8],
     pub position: usize,
+    pub rewind_position: usize,
     pub current_row: usize,
 }
 
@@ -13,8 +14,17 @@ impl<'a> Lexer<'a> {
         Lexer {
             bytes: bytes,
             position: 0,
+            rewind_position: 0,
             current_row: 0,
         }
+    }
+
+    pub fn save_rewind_position(&mut self) {
+      self.rewind_position = self.position;
+    }
+
+    pub fn rewind_position(&mut self) {
+      self.position = self.rewind_position;
     }
 
     pub fn create_eof_token(&mut self) -> Token {
@@ -455,4 +465,19 @@ fn llvm_token_test() {
         TokenType::PrimaryType(PrimaryType::Null),
         "null",
     );
+}
+
+#[test]
+fn rewind_test() {
+    let mut lexer = Lexer::new(
+        r#"
+    123 == 456
+    "#,
+    );
+
+    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+    lexer.save_rewind_position();
+    lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
+    lexer.rewind_position();
+    lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
 }
