@@ -17,11 +17,6 @@ pub enum Expression {
     ArrayElement(Identifier, Box<Expression>, Location),
     Prefix(Prefix, Box<Expression>, Location),
     Infix(Infix, Box<Expression>, Box<Expression>, Location),
-    If {
-        conditions: Vec<Expression>,
-        bodies: Vec<BlockStatement>,
-        location: Location,
-    },
     Function {
         parameters: Vec<Identifier>,
         body: BlockStatement,
@@ -74,41 +69,6 @@ impl Expression {
             Expression::Prefix(prefix, expr, _location) => format!("({}{})", prefix, expr.string()),
             Expression::Infix(infix, left, right, _location) => {
                 format!("({} {} {})", left.string(), infix, right.string())
-            }
-            Expression::If {
-                conditions,
-                bodies,
-                location: _,
-            } => {
-                let mut condition_strings =
-                    conditions.iter().map(|s| s.string()).collect::<Vec<_>>();
-
-                let body_strings = bodies.iter().fold(Vec::new(), |mut stack, body| {
-                    let body_string = body
-                        .iter()
-                        .map(|s| s.string())
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    stack.push(body_string);
-                    stack
-                });
-
-                let mut ret_string = String::new();
-                for (index, condition_string) in condition_strings.iter().enumerate() {
-                    if index == 0 {
-                        ret_string.push_str(&format!(
-                            "if({}) {{ {} }} ",
-                            condition_string, body_strings[index]
-                        ));
-                    } else {
-                        ret_string.push_str(&format!(
-                            "elseif({}) {{ {} }}",
-                            condition_string, body_strings[index]
-                        ));
-                    }
-                }
-
-                format!("{}", ret_string)
             }
             Expression::Function {
                 parameters,
