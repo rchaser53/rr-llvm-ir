@@ -20,11 +20,11 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn save_rewind_position(&mut self) {
-      self.rewind_position = self.position;
+        self.rewind_position = self.position;
     }
 
     pub fn rewind_position(&mut self) {
-      self.position = self.rewind_position;
+        self.position = self.rewind_position;
     }
 
     pub fn create_eof_token(&mut self) -> Token {

@@ -6,6 +6,7 @@ use crate::parser::infix::*;
 use crate::parser::precedence::*;
 use crate::parser::prefix::*;
 use crate::parser::statements::*;
+use crate::parser::sufix::*;
 
 pub struct Parser<'a> {
     pub lexer: &'a mut Lexer<'a>,
@@ -302,16 +303,23 @@ impl<'a> Parser<'a> {
         {
             if let Some(token) = self.peek_token.to_owned() {
                 left_exp = match token.token_type {
+                    TokenType::Minus | TokenType::Plus => {
+                        if *(&self.try_parse_sufix()) {
+                            self.next_token();
+                            self.parse_sufix(left_exp)
+                        } else {
+                            self.next_token();
+                            self.parse_infix_expression(left_exp)
+                        }
+                    }
                     TokenType::Divide
                     | TokenType::Eq
                     | TokenType::Gt
                     | TokenType::Gte
                     | TokenType::Lt
                     | TokenType::Lte
-                    | TokenType::Minus
                     | TokenType::Multiply
                     | TokenType::NotEq
-                    | TokenType::Plus
                     | TokenType::Rem => {
                         self.next_token();
                         self.parse_infix_expression(left_exp)
@@ -328,6 +336,48 @@ impl<'a> Parser<'a> {
             }
         }
         left_exp
+    }
+
+    pub fn try_parse_sufix(&mut self) -> bool {
+        self.lexer.save_rewind_position();
+        let previous_token = if let Some(token) = self.peek_token.to_owned() {
+          token
+        } else {
+          unreachable!()
+        };
+        self.next_token();
+
+        let result = if let Some(token) = self.peek_token.to_owned() {
+            token.token_type == previous_token.token_type
+        } else {
+            false
+        };
+        self.lexer.rewind_position();
+
+        result
+    }
+
+    pub fn parse_sufix(&mut self, left: Option<Expression>) -> Option<Expression> {
+        if left.is_none() {
+            return None;
+        }
+
+        if let Some(token) = self.peek_token.to_owned() {
+            let sufix_type = match token.token_type {
+                TokenType::Minus => Sufix::Minus,
+                TokenType::Plus => Sufix::Plus,
+                _ => unreachable!(),
+            };
+            self.next_token();
+
+            return Some(Expression::Sufix(
+                sufix_type,
+                Box::new(left.unwrap()),
+                Location::new(self.lexer.current_row),
+            ));
+        };
+
+        None
     }
 
     pub fn parse_prefix_expression(&mut self) -> Option<Expression> {
@@ -947,4 +997,13 @@ fn wrong_prefix() {
     return > 3;
   "#;
     parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
+}
+
+#[test]
+fn sufix_parsing() {
+    let input = r#"
+    5++;
+"#;
+    let program = parse_input(input);
+    statement_assert(&program[0], "(5++)");
 }

@@ -3,6 +3,7 @@ use std::fmt;
 use crate::parser::infix::*;
 use crate::parser::prefix::*;
 use crate::parser::statements::*;
+use crate::parser::sufix::*;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Identifier(pub String);
@@ -17,6 +18,7 @@ pub enum Expression {
     ArrayElement(Identifier, Box<Expression>, Location),
     Prefix(Prefix, Box<Expression>, Location),
     Infix(Infix, Box<Expression>, Box<Expression>, Location),
+    Sufix(Sufix, Box<Expression>, Location),
     Function {
         parameters: Vec<Identifier>,
         body: BlockStatement,
@@ -69,6 +71,9 @@ impl Expression {
             Expression::Prefix(prefix, expr, _location) => format!("({}{})", prefix, expr.string()),
             Expression::Infix(infix, left, right, _location) => {
                 format!("({} {} {})", left.string(), infix, right.string())
+            }
+            Expression::Sufix(sufix, left, _location) => {
+                format!("({}{})", left.string(), sufix)
             }
             Expression::Function {
                 parameters,
