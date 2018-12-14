@@ -12,6 +12,8 @@ pub struct Parser<'a> {
     pub lexer: &'a mut Lexer<'a>,
     pub cur_token: Option<Token>,
     pub peek_token: Option<Token>,
+    pub preserve_cur_token: Option<Token>,
+    pub preserve_peek_token: Option<Token>,
     pub errors: Vec<String>,
 }
 
@@ -24,6 +26,8 @@ impl<'a> Parser<'a> {
             lexer: lexer,
             cur_token: current_token,
             peek_token: peek_token,
+            preserve_cur_token: None,
+            preserve_peek_token: None,
             errors: Vec::new(),
         }
     }
@@ -31,6 +35,18 @@ impl<'a> Parser<'a> {
     pub fn next_token(&mut self) {
         self.cur_token = self.peek_token.to_owned();
         self.peek_token = self.lexer.next_token();
+    }
+
+    pub fn save_rewind_position(&mut self) {
+      self.lexer.save_rewind_position();
+      self.preserve_cur_token = self.cur_token.clone();
+      self.preserve_peek_token = self.peek_token.clone();
+    }
+
+    pub fn rewind_position(&mut self) {
+        self.lexer.rewind_position();
+        self.cur_token = self.preserve_cur_token.clone();
+        self.peek_token = self.preserve_peek_token.clone();
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -339,7 +355,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn try_parse_sufix(&mut self) -> bool {
-        self.lexer.save_rewind_position();
+        self.save_rewind_position();
         let previous_token = if let Some(token) = self.peek_token.to_owned() {
           token
         } else {
@@ -352,7 +368,7 @@ impl<'a> Parser<'a> {
         } else {
             false
         };
-        self.lexer.rewind_position();
+        self.rewind_position();
 
         result
     }
