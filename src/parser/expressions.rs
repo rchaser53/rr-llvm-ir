@@ -72,9 +72,7 @@ impl Expression {
             Expression::Infix(infix, left, right, _location) => {
                 format!("({} {} {})", left.string(), infix, right.string())
             }
-            Expression::Sufix(sufix, left, _location) => {
-                format!("({}{})", left.string(), sufix)
-            }
+            Expression::Sufix(sufix, left, _location) => format!("({}{})", left.string(), sufix),
             Expression::Function {
                 parameters,
                 body,

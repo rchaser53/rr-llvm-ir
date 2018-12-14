@@ -38,9 +38,9 @@ impl<'a> Parser<'a> {
     }
 
     pub fn save_rewind_position(&mut self) {
-      self.lexer.save_rewind_position();
-      self.preserve_cur_token = self.cur_token.clone();
-      self.preserve_peek_token = self.peek_token.clone();
+        self.lexer.save_rewind_position();
+        self.preserve_cur_token = self.cur_token.clone();
+        self.preserve_peek_token = self.peek_token.clone();
     }
 
     pub fn rewind_position(&mut self) {
@@ -296,23 +296,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expression(&mut self, precedence: Precedences) -> Option<Expression> {
-        let mut left_exp: Option<Expression> = None;
-        if let Some(token) = self.cur_token.to_owned() {
-            left_exp = match token.token_type {
-                TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
-                TokenType::Integer => self.parse_integer_literal(),
-                TokenType::Fn => self.parse_function_literal(),
-                TokenType::Identifier => self.parse_identifier(),
-                TokenType::Lbracket => self.parse_array(),
-                TokenType::Lparen => self.parse_grouped_expression(),
-                TokenType::String(_) => self.parse_string_literal(),
-                TokenType::True | TokenType::False => self.parse_boolean(),
-                _ => {
-                    self.no_prefix_parse_fn_error(token);
-                    return None;
-                }
-            };
-        }
+        let mut left_exp = self.parse_left_expression();
+        let is_identifier = if let Some(exp) = &left_exp {
+            match exp {
+                Expression::Identifier(_, _) => true,
+                _ => false,
+            }
+        } else {
+            false
+        };
 
         while self.peek_token_is(TokenType::Semicolon) == false
             && precedence < self.peek_precedence()
@@ -320,7 +312,7 @@ impl<'a> Parser<'a> {
             if let Some(token) = self.peek_token.to_owned() {
                 left_exp = match token.token_type {
                     TokenType::Minus | TokenType::Plus => {
-                        if *(&self.try_parse_sufix()) {
+                        if is_identifier && *(&self.try_parse_sufix()) {
                             self.next_token();
                             self.parse_sufix(left_exp)
                         } else {
@@ -354,12 +346,33 @@ impl<'a> Parser<'a> {
         left_exp
     }
 
+    pub fn parse_left_expression(&mut self) -> Option<Expression> {
+        if let Some(token) = self.cur_token.to_owned() {
+            match token.token_type {
+                TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
+                TokenType::Integer => self.parse_integer_literal(),
+                TokenType::Fn => self.parse_function_literal(),
+                TokenType::Identifier => self.parse_identifier(),
+                TokenType::Lbracket => self.parse_array(),
+                TokenType::Lparen => self.parse_grouped_expression(),
+                TokenType::String(_) => self.parse_string_literal(),
+                TokenType::True | TokenType::False => self.parse_boolean(),
+                _ => {
+                    self.no_prefix_parse_fn_error(token);
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn try_parse_sufix(&mut self) -> bool {
         self.save_rewind_position();
         let previous_token = if let Some(token) = self.peek_token.to_owned() {
-          token
+            token
         } else {
-          unreachable!()
+            unreachable!()
         };
         self.next_token();
 
@@ -466,7 +479,7 @@ impl<'a> Parser<'a> {
                 self.emit_error_for_funciton();
             }
 
-            if let Some(token) = self.peek_token.to_owned() {
+            if let Some(_token) = self.peek_token.to_owned() {
                 self.next_token();
             }
         }
@@ -483,7 +496,7 @@ impl<'a> Parser<'a> {
                 self.emit_error_for_funciton();
             }
 
-            if let Some(token) = self.peek_token.to_owned() {
+            if let Some(_token) = self.peek_token.to_owned() {
                 self.next_token();
             }
         }
@@ -500,7 +513,7 @@ impl<'a> Parser<'a> {
             self.emit_error_for_funciton();
         }
 
-        if let Some(token) = self.peek_token.to_owned() {
+        if let Some(_token) = self.peek_token.to_owned() {
             self.next_token();
             return parameters;
         }
@@ -1018,8 +1031,8 @@ fn wrong_prefix() {
 #[test]
 fn sufix_parsing() {
     let input = r#"
-    5++;
+    a++;
 "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "(5++)");
+    statement_assert(&program[0], "(a++)");
 }
