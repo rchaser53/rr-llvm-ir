@@ -5,6 +5,7 @@ extern crate lazy_static;
 extern crate clap;
 extern crate inkwell;
 extern crate libc;
+extern crate linked_hash_map;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -16,6 +17,9 @@ use lexer::lexer::*;
 
 mod parser;
 use parser::parser::*;
+
+mod types;
+use types::symbol::*;
 
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";
@@ -46,6 +50,12 @@ fn main() {
         Ok(input) => {
             let mut lexer = Lexer::new(&input);
             let mut parser = Parser::new(&mut lexer);
+
+            let result = parser.parse_program();
+            if parser.has_error() {
+                panic!("{}", parser.emit_error());
+            }
+            println!("{:?}", result);
         }
         Err(error) => {
             panic!("{}", error);
