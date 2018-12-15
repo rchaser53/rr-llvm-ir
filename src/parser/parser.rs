@@ -8,6 +8,28 @@ use crate::parser::prefix::*;
 use crate::parser::statements::*;
 use crate::parser::sufix::*;
 
+const ParseFixError: &'static str = "could not parse sufix {} as integer. row: {}";
+
+#[macro_export]
+macro_rules! create_err_1 {
+    ($name:ident, $error_message:expr) => {
+        pub fn $name(input: &str) {
+          format!($error_message, input)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! create_err_2 {
+    ($name:ident, $input_type1:ty, $input_type2:ty, $error_message:expr ) => {
+        pub fn $name(input1: $input_type1, input2: $input_type2) -> String {
+          format!($error_message, input1, input2)
+        }
+    };
+}
+
+create_err_2!(parse_sufix_error, &str, usize, "could not parse sufix {:?} as integer. row: {:?}");
+
 pub struct Parser<'a> {
     pub lexer: &'a mut Lexer<'a>,
     pub cur_token: Option<Token>,
@@ -395,7 +417,10 @@ impl<'a> Parser<'a> {
             let sufix_type = match token.token_type {
                 TokenType::Minus => Sufix::Minus,
                 TokenType::Plus => Sufix::Plus,
-                _ => unreachable!(),
+                _ => {
+                  self.errors.push(parse_sufix_error(&left.unwrap().string(), token.current_row));
+                  return None;
+                },
             };
             self.next_token();
 
