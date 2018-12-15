@@ -14,7 +14,7 @@ const ParseFixError: &'static str = "could not parse sufix {} as integer. row: {
 macro_rules! create_err_1 {
     ($name:ident, $error_message:expr) => {
         pub fn $name(input: &str) {
-          format!($error_message, input)
+            format!($error_message, input)
         }
     };
 }
@@ -23,12 +23,17 @@ macro_rules! create_err_1 {
 macro_rules! create_err_2 {
     ($name:ident, $input_type1:ty, $input_type2:ty, $error_message:expr ) => {
         pub fn $name(input1: $input_type1, input2: $input_type2) -> String {
-          format!($error_message, input1, input2)
+            format!($error_message, input1, input2)
         }
     };
 }
 
-create_err_2!(parse_sufix_error, &str, usize, "could not parse sufix {:?} as integer. row: {:?}");
+create_err_2!(
+    parse_sufix_error,
+    TokenType,
+    usize,
+    "could not parse sufix {:?} as integer. row: {:?}"
+);
 
 pub struct Parser<'a> {
     pub lexer: &'a mut Lexer<'a>,
@@ -403,6 +408,7 @@ impl<'a> Parser<'a> {
         } else {
             false
         };
+
         self.rewind_position();
 
         result
@@ -418,9 +424,10 @@ impl<'a> Parser<'a> {
                 TokenType::Minus => Sufix::Minus,
                 TokenType::Plus => Sufix::Plus,
                 _ => {
-                  self.errors.push(parse_sufix_error(&left.unwrap().string(), token.current_row));
-                  return None;
-                },
+                    self.errors
+                        .push(parse_sufix_error(token.token_type, token.current_row));
+                    return None;
+                }
             };
             self.next_token();
 
@@ -778,14 +785,6 @@ impl<'a> Parser<'a> {
         false
     }
 
-    pub fn emit_error(&self) -> String {
-        self.errors.join("\n")
-    }
-
-    pub fn emit_error_for_funciton(&self) {
-        panic!("parse failed at row:{}", self.lexer.current_row);
-    }
-
     pub fn expect_peek(&mut self, token_type: TokenType) -> bool {
         if self.peek_token_is(token_type) {
             self.next_token();
@@ -796,24 +795,6 @@ impl<'a> Parser<'a> {
             }
             return false;
         }
-    }
-
-    pub fn has_error(&self) -> bool {
-        self.errors.len() > 0
-    }
-
-    pub fn no_prefix_parse_fn_error(&mut self, token: Token) {
-        self.errors.push(format!(
-            "no prefix parse function for {:?}. row: {}",
-            token.token_type, token.current_row
-        ));
-    }
-
-    pub fn peek_error(&mut self, token: Token) {
-        self.errors.push(format!(
-            "expected next token to be {:?} instead. row: {}",
-            token.token_type, token.current_row
-        ));
     }
 
     pub fn peek_token_is(&mut self, token_type: TokenType) -> bool {
@@ -831,6 +812,42 @@ impl<'a> Parser<'a> {
             }
         }
         Precedences::Lowest
+    }
+
+    pub fn has_error(&self) -> bool {
+        self.errors.len() > 0
+    }
+
+    pub fn emit_error(&self) -> String {
+        self.errors.join("\n")
+    }
+
+    pub fn emit_error_for_funciton(&mut self) {
+        self.errors
+            .push(format!("parse failed at row:{}", self.lexer.current_row));
+        self.skip_until_semicolon();
+    }
+
+    pub fn no_prefix_parse_fn_error(&mut self, token: Token) {
+        self.errors.push(format!(
+            "no prefix parse function for {:?}. row: {}",
+            token.token_type, token.current_row
+        ));
+        self.skip_until_semicolon();
+    }
+
+    pub fn peek_error(&mut self, token: Token) {
+        self.errors.push(format!(
+            "expected next token to be {:?} instead. row: {}",
+            token.token_type, token.current_row
+        ));
+        self.skip_until_semicolon();
+    }
+
+    pub fn skip_until_semicolon(&mut self) {
+        while self.peek_token_is(TokenType::Semicolon) {
+            self.next_token();
+        }
     }
 }
 
