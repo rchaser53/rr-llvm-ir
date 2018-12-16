@@ -353,7 +353,7 @@ impl<'a> Parser<'a> {
             if let Some(token) = self.peek_token.to_owned() {
                 left_exp = match token.token_type {
                     TokenType::Minus | TokenType::Plus => {
-                        if is_identifier && *(&self.try_parse_sufix()) {
+                        if is_identifier && self.try_parse_sufix() {
                             self.next_token();
                             self.parse_sufix(left_exp)
                         } else {
