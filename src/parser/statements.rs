@@ -31,8 +31,7 @@ impl Statement {
                 bodies,
                 location: _,
             } => {
-                let mut condition_strings =
-                    conditions.iter().map(|s| s.string()).collect::<Vec<_>>();
+                let condition_strings = conditions.iter().map(|s| s.string()).collect::<Vec<_>>();
 
                 let body_strings = bodies.iter().fold(Vec::new(), |mut stack, body| {
                     let body_string = body

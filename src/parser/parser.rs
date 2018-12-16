@@ -8,8 +8,6 @@ use crate::parser::prefix::*;
 use crate::parser::statements::*;
 use crate::parser::sufix::*;
 
-const ParseFixError: &'static str = "could not parse sufix {} as integer. row: {}";
-
 #[macro_export]
 macro_rules! create_err_1 {
     ($name:ident, $error_message:expr) => {
@@ -104,59 +102,60 @@ impl<'a> Parser<'a> {
     }
 
     pub fn handle_identifier(&mut self) -> Option<Statement> {
-        if self.peek_token_is(TokenType::Assign) {
-            return self.parse_assign_statement();
-        }
-
-        let maybe_array = if let Some(expression) = self.parse_expression(Precedences::Lowest) {
-            expression
+        self.save_rewind_position();
+        let result = if self.try_parse_array_element() {
+            self.parse_assign_array_element()
+        } else if self.peek_token_is(TokenType::Assign) {
+            self.parse_assign_statement()
         } else {
-            return None;
-        };
-    pub fn try_parse_array_element(&mut self) -> bool {
-      if self.peek_token_is(TokenType::Lbracket) == false {
-        return false;
-      };
-      self.next_token();
-      self.next_token();
-
-      let result = if let Some(_) = self.parse_expression(Precedences::Lowest) {
-        self.next_token();
-        self.cur_token_is(TokenType::Rbracket) && self.peek_token_is(TokenType::Assign)
-      } else {
-        false
-      };
-
-        if self.cur_token_is(TokenType::Assign) == false {
-            if self.peek_token_is(TokenType::Semicolon) {
-                self.next_token();
-            }
-            // in this case maybe_array is not a array
-            return Some(Statement::Expression(maybe_array));
-        }
-        self.next_token();
-      self.rewind_position();
-      result
-    }
-
-        let assign_expression = if let Some(expression) = self.parse_expression(Precedences::Lowest)
-        {
-            expression
-        } else {
-            return None;
+            self.parse_expression_statement()
         };
 
         if self.peek_token_is(TokenType::Semicolon) {
             self.next_token();
         }
 
-        match maybe_array.clone() {
+        result
+    }
+
+    pub fn try_parse_array_element(&mut self) -> bool {
+        if self.peek_token_is(TokenType::Lbracket) == false {
+            return false;
+        };
+        self.next_token();
+        self.next_token();
+
+        let result = if let Some(_) = self.parse_expression(Precedences::Lowest) {
+            self.next_token();
+            self.cur_token_is(TokenType::Rbracket) && self.peek_token_is(TokenType::Assign)
+        } else {
+            false
+        };
+
+        self.rewind_position();
+        result
+    }
+
+    pub fn parse_assign_array_element(&mut self) -> Option<Statement> {
+        let left = if let Some(expression) = self.parse_expression(Precedences::Lowest) {
+            expression
+        } else {
+            unreachable!();
+        };
+        self.next_token();
+        self.next_token();
+
+        let right = if let Some(expression) = self.parse_expression(Precedences::Lowest) {
+            expression
+        } else {
+            unreachable!();
+        };
+
+        match left {
             Expression::ArrayElement(ident, index_expression, _) => Some(
-                Statement::AssignmentAggregate(ident, assign_expression, *index_expression),
+                Statement::AssignmentAggregate(ident, right, *index_expression),
             ),
-            _ => {
-                panic!("{:?} cannot be assigned", maybe_array);
-            }
+            _ => unreachable!(),
         }
     }
 
