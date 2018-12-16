@@ -113,7 +113,19 @@ impl<'a> Parser<'a> {
         } else {
             return None;
         };
+    pub fn try_parse_array_element(&mut self) -> bool {
+      if self.peek_token_is(TokenType::Lbracket) == false {
+        return false;
+      };
+      self.next_token();
+      self.next_token();
+
+      let result = if let Some(_) = self.parse_expression(Precedences::Lowest) {
         self.next_token();
+        self.cur_token_is(TokenType::Rbracket) && self.peek_token_is(TokenType::Assign)
+      } else {
+        false
+      };
 
         if self.cur_token_is(TokenType::Assign) == false {
             if self.peek_token_is(TokenType::Semicolon) {
@@ -123,6 +135,9 @@ impl<'a> Parser<'a> {
             return Some(Statement::Expression(maybe_array));
         }
         self.next_token();
+      self.rewind_position();
+      result
+    }
 
         let assign_expression = if let Some(expression) = self.parse_expression(Precedences::Lowest)
         {
