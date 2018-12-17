@@ -19,7 +19,7 @@ mod parser;
 use parser::parser::*;
 
 mod types;
-use types::symbol::*;
+use types::walker::*;
 
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";
@@ -51,11 +51,14 @@ fn main() {
             let mut lexer = Lexer::new(&input);
             let mut parser = Parser::new(&mut lexer);
 
-            let result = parser.parse_program();
+            let statements = parser.parse_program();
             if parser.has_error() {
                 panic!("{}", parser.emit_error());
             }
-            println!("{:?}", result);
+            let mut walker = Walker::new();
+            walker.walk(statements);
+
+            println!("{:?}", walker.symbol_table.symbols);
         }
         Err(error) => {
             panic!("{}", error);

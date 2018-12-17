@@ -32,6 +32,14 @@ impl SymbolTable {
             String::from("string"),
             Symbol::new("string", SymbolType::String, true),
         );
+        symbols.insert(
+            String::from("bool"),
+            Symbol::new("bool", SymbolType::Boolean, true),
+        );
+        symbols.insert(
+            String::from("void"),
+            Symbol::new("void", SymbolType::Void, true),
+        );
 
         symbols
     }
@@ -79,4 +87,6 @@ pub enum SymbolType {
     Int,
     Float,
     String,
+    Boolean,
+    Void,
 }
