@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::parser::infix::*;
 use crate::parser::prefix::*;
 use crate::parser::statements::*;

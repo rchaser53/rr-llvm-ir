@@ -1,8 +1,9 @@
 use crate::parser::expressions::*;
+use crate::types::symbol::*;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Statement {
-    Let(Identifier, Expression),
+    Let(Identifier, Expression, SymbolType),
     Return(Expression),
     Expression(Expression),
     If {
@@ -21,9 +22,12 @@ pub type Program = BlockStatement;
 impl Statement {
     pub fn string(&self) -> String {
         match self {
-            Statement::Let(Identifier(ref string), expr) => {
-                format!("let {} = {}", string, &expr.string())
-            }
+            Statement::Let(Identifier(ref string), expr, symbol_type) => format!(
+                "let {}: {} = {}",
+                string,
+                symbol_type.string(),
+                &expr.string()
+            ),
             Statement::Return(expr) => ("return ".to_owned() + &expr.string()).to_string(),
             Statement::Expression(expr) => expr.string(),
             Statement::If {

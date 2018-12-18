@@ -1,7 +1,5 @@
 use linked_hash_map::LinkedHashMap;
 
-use std::rc::Rc;
-
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
     pub enclosing_scope: Box<Option<SymbolTable>>,
@@ -90,21 +88,23 @@ pub enum SymbolType {
     Boolean,
     Void,
     Null,
+    Array(Box<SymbolType>),
     Function(Vec<Box<SymbolType>>, Box<SymbolType>),
     Custom(String),
 }
 
 impl SymbolType {
     pub fn string(&self) -> String {
-      match self {
-        SymbolType::Integer => String::from("integer"),
-        SymbolType::Float => String::from("float"),
-        SymbolType::String => String::from("string"),
-        SymbolType::Boolean => String::from("boolean"),
-        SymbolType::Void => String::from("void"),
-        SymbolType::Null => String::from("null"),
-        SymbolType::Function(_, _) => String::from("function"),
-        SymbolType::Custom(name) => name.to_string(),
-      }
+        match self {
+            SymbolType::Integer => String::from("int"),
+            SymbolType::Float => String::from("float"),
+            SymbolType::String => String::from("string"),
+            SymbolType::Boolean => String::from("boolean"),
+            SymbolType::Void => String::from("void"),
+            SymbolType::Null => String::from("null"),
+            SymbolType::Array(boxed_type) => format!("{}[]", boxed_type.string()),
+            SymbolType::Function(_, _) => String::from("function"),
+            SymbolType::Custom(name) => name.to_string(),
+        }
     }
 }

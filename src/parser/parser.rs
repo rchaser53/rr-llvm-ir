@@ -8,6 +8,8 @@ use crate::parser::prefix::*;
 use crate::parser::statements::*;
 use crate::parser::sufix::*;
 
+use crate::types::symbol::*;
+
 #[macro_export]
 macro_rules! create_err_1 {
     ($name:ident, $error_message:expr) => {
@@ -190,25 +192,56 @@ impl<'a> Parser<'a> {
 
         if let Some(token) = self.cur_token.to_owned() {
             let name = Identifier(token.value.to_owned());
+            if let Some(symbol_type) = self.extract_symbol_type(token) {
+                if self.expect_peek(TokenType::Assign) == false {
+                    return None;
+                }
 
-            if self.expect_peek(TokenType::Assign) == false {
-                return None;
-            }
-
-            self.next_token();
-            let expression = if let Some(value) = self.parse_expression(Precedences::Lowest) {
-                value
-            } else {
-                return None;
-            };
-
-            while self.peek_token_is(TokenType::Semicolon) {
                 self.next_token();
-            }
+                let expression = if let Some(value) = self.parse_expression(Precedences::Lowest) {
+                    value
+                } else {
+                    return None;
+                };
 
-            return Some(Statement::Let(name, expression));
+                while self.peek_token_is(TokenType::Semicolon) {
+                    self.next_token();
+                }
+
+                return Some(Statement::Let(name, expression, symbol_type));
+            }
         }
         None
+    }
+
+    pub fn extract_symbol_type(&mut self, token: Token) -> Option<SymbolType> {
+        if self.peek_token_is(TokenType::Colon) == false {
+            return None;
+        }
+        self.next_token();
+
+        if let Some(token) = self.peek_token.to_owned() {
+            let base_type = match token.token_type {
+                TokenType::Identifier => SymbolType::Custom(token.value),
+                TokenType::PrimaryType(symbol_type) => symbol_type,
+                _ => panic!("{}: failed to extract symbol type", token.value),
+            };
+            self.next_token();
+
+            if self.peek_token_is(TokenType::Lbracket) == false {
+                return Some(base_type);
+            }
+            self.next_token();
+
+            if self.peek_token_is(TokenType::Rbracket) == false {
+                return None;
+            }
+            self.next_token();
+
+            Some(SymbolType::Array(Box::new(base_type)))
+        } else {
+            None
+        }
     }
 
     pub fn parse_return_statement(&mut self) -> Option<Statement> {
@@ -784,16 +817,16 @@ impl<'a> Parser<'a> {
 
     pub fn cur_precedence(&self) -> Precedences {
         if let Some(token) = &self.cur_token {
-            let token_type = token.token_type;
-            if PRECEDENCE_TOKEN_MAP.contains_key(&token_type) {
-                return PRECEDENCE_TOKEN_MAP[&token_type].to_owned();
+            let token_type = &token.token_type;
+            if PRECEDENCE_TOKEN_MAP.contains_key(token_type) {
+                return PRECEDENCE_TOKEN_MAP[token_type].to_owned();
             }
         }
         Precedences::Lowest
     }
 
     pub fn cur_token_is(&self, token_type: TokenType) -> bool {
-        if let Some(token) = &self.cur_token {
+        if let Some(ref token) = &self.cur_token {
             return token.token_type == token_type;
         }
         false
@@ -820,9 +853,9 @@ impl<'a> Parser<'a> {
 
     pub fn peek_precedence(&mut self) -> Precedences {
         if let Some(token) = &self.peek_token {
-            let token_type = token.token_type;
-            if PRECEDENCE_TOKEN_MAP.contains_key(&token_type) {
-                return PRECEDENCE_TOKEN_MAP[&token_type].to_owned();
+            let token_type = &token.token_type;
+            if PRECEDENCE_TOKEN_MAP.contains_key(token_type) {
+                return PRECEDENCE_TOKEN_MAP[token_type].to_owned();
             }
         }
         Precedences::Lowest
@@ -904,16 +937,16 @@ fn parse_and_emit_error(input: &str, error_stack: Vec<&str>) {
 #[test]
 fn let_statements() {
     let input = r#"
-    let x = 5;
-    let y = 10;
-    let z = "abc";
-    let foobar = 939393;
+    let x: int = 5;
+    let y: boolean = false;
+    let z: string = "abc";
+    let foobar: int = 939393;
   "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "let x = 5");
-    statement_assert(&program[1], "let y = 10");
-    statement_assert(&program[2], r#"let z = "abc""#);
-    statement_assert(&program[3], "let foobar = 939393");
+    statement_assert(&program[0], "let x: int = 5");
+    statement_assert(&program[1], "let y: boolean = false");
+    statement_assert(&program[2], r#"let z: string = "abc""#);
+    statement_assert(&program[3], "let foobar: int = 939393");
 }
 
 #[test]
@@ -933,22 +966,22 @@ fn return_statements() {
 fn while_statements() {
     let input = r#"
   while (true) {
-    let i = i + 1;
+    let i: int = i + 1;
   }
 "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "while (true) { let i = (i + 1) }");
+    statement_assert(&program[0], "while (true) { let i: int = (i + 1) }");
 }
 
 #[test]
 fn assign_statements() {
     let input = r#"
-    let x = 5;
+    let x: int = 5;
     x = 10;
     x = 10 * 3;
   "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "let x = 5");
+    statement_assert(&program[0], "let x: int = 5");
     statement_assert(&program[1], "x = 10");
     statement_assert(&program[2], "x = (10 * 3)");
 }
@@ -956,11 +989,11 @@ fn assign_statements() {
 #[test]
 fn assign_aggregate_statements() {
     let input = r#"
-    let x = [1, 2, 3];
+    let x: int[] = [1, 2, 3];
     x[0] = 10;
   "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "let x = [1, 2, 3]");
+    statement_assert(&program[0], "let x: int[] = [1, 2, 3]");
     statement_assert(&program[1], "x[0] = 10");
 }
 
@@ -1038,11 +1071,11 @@ fn array_parsing() {
 #[test]
 fn array_element_parsing() {
     let input = r#"
-    let a = [1, 2, 3];
+    let a: int[] = [1, 2, 3];
     a[1];
 "#;
     let program = parse_input(input);
-    statement_assert(&program[0], "let a = [1, 2, 3]");
+    statement_assert(&program[0], "let a: int[] = [1, 2, 3]");
     statement_assert(&program[1], "a[1]");
 }
 
