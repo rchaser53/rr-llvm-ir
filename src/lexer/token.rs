@@ -1,10 +1,12 @@
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+use crate::types::symbol::*;
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
     Integer,
     String(usize),
     Identifier,
     Boolean,
-    PrimaryType(PrimaryType),
+    PrimaryType(SymbolType),
 
     Eof,
     Assign,
@@ -45,14 +47,6 @@ pub enum TokenType {
     Multiply, // *
     Rem,      // %
     Bang,     // !
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum PrimaryType {
-    Boolean,
-    Null,
-    String,
-    Integer,
 }
 
 #[derive(Clone, Debug)]

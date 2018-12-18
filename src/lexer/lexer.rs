@@ -1,4 +1,5 @@
 use crate::lexer::token::*;
+use crate::types::symbol::*;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -43,10 +44,10 @@ impl<'a> Lexer<'a> {
             "else" => TokenType::Else,
             "return" => TokenType::Return,
             "break" => TokenType::Break,
-            "boolean" => TokenType::PrimaryType(PrimaryType::Boolean),
-            "int" => TokenType::PrimaryType(PrimaryType::Integer),
-            "string" => TokenType::PrimaryType(PrimaryType::String),
-            "null" => TokenType::PrimaryType(PrimaryType::Null),
+            "boolean" => TokenType::PrimaryType(SymbolType::Boolean),
+            "int" => TokenType::PrimaryType(SymbolType::Integer),
+            "string" => TokenType::PrimaryType(SymbolType::String),
+            "null" => TokenType::PrimaryType(SymbolType::Null),
             _ => token,
         }
     }
@@ -447,22 +448,22 @@ fn llvm_token_test() {
     );
     lexer_assert(
         lexer.next_token().unwrap(),
-        TokenType::PrimaryType(PrimaryType::Integer),
+        TokenType::PrimaryType(SymbolType::Integer),
         "int",
     );
     lexer_assert(
         lexer.next_token().unwrap(),
-        TokenType::PrimaryType(PrimaryType::String),
+        TokenType::PrimaryType(SymbolType::String),
         "string",
     );
     lexer_assert(
         lexer.next_token().unwrap(),
-        TokenType::PrimaryType(PrimaryType::Boolean),
+        TokenType::PrimaryType(SymbolType::Boolean),
         "boolean",
     );
     lexer_assert(
         lexer.next_token().unwrap(),
-        TokenType::PrimaryType(PrimaryType::Null),
+        TokenType::PrimaryType(SymbolType::Null),
         "null",
     );
 }

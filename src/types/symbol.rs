@@ -22,7 +22,7 @@ impl SymbolTable {
         let mut symbols = LinkedHashMap::new();
         symbols.insert(
             String::from("int"),
-            Symbol::new("int", SymbolType::Int, true),
+            Symbol::new("int", SymbolType::Integer, true),
         );
         symbols.insert(
             String::from("float"),
@@ -82,11 +82,29 @@ impl Symbol {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SymbolType {
-    Int,
+    Integer,
     Float,
     String,
     Boolean,
     Void,
+    Null,
+    Function(Vec<Box<SymbolType>>, Box<SymbolType>),
+    Custom(String),
+}
+
+impl SymbolType {
+    pub fn string(&self) -> String {
+      match self {
+        SymbolType::Integer => String::from("integer"),
+        SymbolType::Float => String::from("float"),
+        SymbolType::String => String::from("string"),
+        SymbolType::Boolean => String::from("boolean"),
+        SymbolType::Void => String::from("void"),
+        SymbolType::Null => String::from("null"),
+        SymbolType::Function(_, _) => String::from("function"),
+        SymbolType::Custom(name) => name.to_string(),
+      }
+    }
 }
