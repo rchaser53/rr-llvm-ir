@@ -85,7 +85,19 @@ impl Symbol {
             SymbolType::Void => format!("{}: void", name),
             SymbolType::Null => format!("{}: null", name),
             SymbolType::Array(boxed_type) => format!("{}: {}[]", name, boxed_type.string()),
-            SymbolType::Function(_, _) => format!("{}: function", name),
+            SymbolType::Function(args, return_type) => {
+                let arg_types_string: String = args
+                    .iter()
+                    .map(|arg| arg.string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!(
+                    "{}: function({}): {}",
+                    name,
+                    arg_types_string,
+                    return_type.string()
+                )
+            }
             SymbolType::Custom(custom_name) => format!("{}: {}", name, custom_name),
         }
     }
@@ -114,7 +126,14 @@ impl SymbolType {
             SymbolType::Void => String::from("void"),
             SymbolType::Null => String::from("null"),
             SymbolType::Array(boxed_type) => format!("{}[]", boxed_type.string()),
-            SymbolType::Function(_, _) => String::from("function"),
+            SymbolType::Function(args, return_type) => {
+                let arg_types_string: String = args
+                    .iter()
+                    .map(|arg| arg.string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("function({}): {}", arg_types_string, return_type.string())
+            }
             SymbolType::Custom(name) => name.to_string(),
         }
     }

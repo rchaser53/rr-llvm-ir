@@ -82,7 +82,7 @@ pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
 }
 
 #[test]
-fn while_statements() {
+fn let_int() {
     let input = r#"
   let a: int = 1;
 "#;

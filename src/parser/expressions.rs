@@ -3,6 +3,8 @@ use crate::parser::prefix::*;
 use crate::parser::statements::*;
 use crate::parser::sufix::*;
 
+use crate::types::symbol::*;
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct Identifier(pub String);
 
@@ -18,9 +20,10 @@ pub enum Expression {
     Infix(Infix, Box<Expression>, Box<Expression>, Location),
     Sufix(Sufix, Box<Expression>, Location),
     Function {
-        parameters: Vec<Identifier>,
+        parameters: Vec<(Identifier, SymbolType)>,
         body: BlockStatement,
         location: Location,
+        return_type: SymbolType,
     },
     Call(Call),
 }
@@ -72,12 +75,10 @@ impl Expression {
             }
             Expression::Sufix(sufix, left, _location) => format!("({}{})", left.string(), sufix),
             Expression::Function {
-                parameters,
-                body,
-                location: _,
+                parameters, body, ..
             } => {
                 let mut param_string = String::new();
-                for (index, Identifier(ref string)) in parameters.iter().enumerate() {
+                for (index, (Identifier(ref string), _)) in parameters.iter().enumerate() {
                     if index == 0 {
                         param_string.push_str(&format!("{}", string));
                     } else {

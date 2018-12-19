@@ -193,7 +193,7 @@ impl<'a> Parser<'a> {
 
         if let Some(token) = self.cur_token.to_owned() {
             let name = Identifier(token.value.to_owned());
-            if let Some(symbol_type) = self.extract_symbol_type(token) {
+            if let Some(symbol_type) = self.parse_identifier_symbol_type() {
                 if self.expect_peek(TokenType::Assign) == false {
                     return None;
                 }
@@ -215,18 +215,14 @@ impl<'a> Parser<'a> {
         None
     }
 
-    pub fn extract_symbol_type(&mut self, token: Token) -> Option<SymbolType> {
+    pub fn parse_identifier_symbol_type(&mut self) -> Option<SymbolType> {
         if self.peek_token_is(TokenType::Colon) == false {
             return None;
         }
         self.next_token();
 
         if let Some(token) = self.peek_token.to_owned() {
-            let base_type = match token.token_type {
-                TokenType::Identifier => SymbolType::Custom(token.value),
-                TokenType::PrimaryType(symbol_type) => symbol_type,
-                _ => panic!("{}: failed to extract symbol type", token.value),
-            };
+            let base_type = self.extract_symbol_type(token);
             self.next_token();
 
             if self.peek_token_is(TokenType::Lbracket) == false {
@@ -528,6 +524,7 @@ impl<'a> Parser<'a> {
         }
 
         let parameters = self.parse_function_parameters();
+        let return_type = self.parse_return_type();
 
         if self.expect_peek(TokenType::Lbrace) == false {
             return None;
@@ -535,25 +532,28 @@ impl<'a> Parser<'a> {
 
         if let Some(body) = self.parse_block_statement() {
             return Some(Expression::Function {
-                parameters: parameters,
-                body: body,
+                parameters,
+                body,
                 location: Location::new(self.lexer.current_row),
+                return_type,
             });
         }
         None
     }
 
-    pub fn parse_function_parameters(&mut self) -> Vec<Identifier> {
+    pub fn parse_function_parameters(&mut self) -> Vec<(Identifier, SymbolType)> {
         let mut parameters = Vec::new();
 
         if self.peek_token_is(TokenType::Rparen) {
             self.next_token();
-            return self.parser_return_type(parameters);
+            return Vec::new();
         }
         self.next_token();
 
         if let Some(token) = self.cur_token.to_owned() {
-            parameters.push(Identifier(token.value.to_owned()));
+            let name = token.value.to_owned();
+            let symbol = self.extract_symbol_type(token);
+            parameters.push((Identifier(name), symbol));
 
             if self.expect_peek(TokenType::Colon) == false {
                 self.emit_error_for_funciton();
@@ -569,7 +569,9 @@ impl<'a> Parser<'a> {
             self.next_token();
 
             if let Some(token) = self.cur_token.to_owned() {
-                parameters.push(Identifier(token.value.to_owned()));
+                let name = token.value.to_owned();
+                let symbol = self.extract_symbol_type(token);
+                parameters.push((Identifier(name), symbol));
             }
 
             if self.expect_peek(TokenType::Colon) == false {
@@ -585,17 +587,17 @@ impl<'a> Parser<'a> {
             self.emit_error_for_funciton();
         }
 
-        self.parser_return_type(parameters)
+        parameters
     }
 
-    pub fn parser_return_type(&mut self, parameters: Vec<Identifier>) -> Vec<Identifier> {
+    pub fn parse_return_type(&mut self) -> SymbolType {
         if self.expect_peek(TokenType::Colon) == false {
             self.emit_error_for_funciton();
         }
 
-        if let Some(_token) = self.peek_token.to_owned() {
+        if let Some(token) = self.peek_token.to_owned() {
             self.next_token();
-            return parameters;
+            return self.extract_symbol_type(token);
         }
 
         self.emit_error_for_funciton();
@@ -729,11 +731,7 @@ impl<'a> Parser<'a> {
             });
 
             match expr.clone() {
-                Expression::Function {
-                    parameters: _,
-                    body: _,
-                    location: _,
-                } => {
+                Expression::Function { .. } => {
                     if let Some(token) = self.peek_token.to_owned() {
                         return match token.token_type {
                             TokenType::Lparen => {
@@ -895,6 +893,14 @@ impl<'a> Parser<'a> {
     pub fn skip_until_semicolon(&mut self) {
         while self.peek_token_is(TokenType::Semicolon) {
             self.next_token();
+        }
+    }
+
+    pub fn extract_symbol_type(&self, token: Token) -> SymbolType {
+        match token.token_type {
+            TokenType::Identifier => SymbolType::Custom(token.value),
+            TokenType::PrimaryType(symbol_type) => symbol_type,
+            _ => panic!("{}: failed to extract symbol type", token.value),
         }
     }
 }
