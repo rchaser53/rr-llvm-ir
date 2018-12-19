@@ -76,7 +76,18 @@ impl Symbol {
     }
 
     pub fn string(&self) -> String {
-        format!("<{}: {:?}>", self.name, self.symbol_type)
+        let name = self.name.to_owned();
+        match &self.symbol_type {
+            SymbolType::Integer => format!("{}: int", name),
+            SymbolType::Float => format!("{}: float", name),
+            SymbolType::String => format!("{}: string", name),
+            SymbolType::Boolean => format!("{}: boolean", name),
+            SymbolType::Void => format!("{}: void", name),
+            SymbolType::Null => format!("{}: null", name),
+            SymbolType::Array(boxed_type) => format!("{}: {}[]", name, boxed_type.string()),
+            SymbolType::Function(_, _) => format!("{}: function", name),
+            SymbolType::Custom(custom_name) => format!("{}: {}", name, custom_name),
+        }
     }
 }
 

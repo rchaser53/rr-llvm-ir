@@ -57,8 +57,6 @@ fn main() {
             }
             let mut walker = Walker::new();
             walker.walk(statements);
-
-            println!("{:?}", walker.symbol_table.symbols);
         }
         Err(error) => {
             panic!("{}", error);
