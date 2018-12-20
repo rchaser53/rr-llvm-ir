@@ -1,6 +1,8 @@
 #![feature(uniform_paths)]
 
 #[macro_use]
+extern crate failure;
+#[macro_use]
 extern crate lazy_static;
 extern crate clap;
 extern crate inkwell;

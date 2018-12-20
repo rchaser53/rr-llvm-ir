@@ -1,5 +1,18 @@
+use std::*;
+
 use crate::lexer::token::*;
 use crate::types::symbol::*;
+
+#[derive(Fail, Debug)]
+pub enum LexerError {
+    #[fail(display = "")]
+    EndOfFile,
+
+    #[fail(display = "invalid syntax for lexer")]
+    InvalidSyntax,
+}
+
+type Result<T> = result::Result<T, LexerError>;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -52,57 +65,49 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn get_next_char(&mut self) -> Option<u8> {
+    pub fn get_next_char(&mut self) -> Result<u8> {
         if self.position < self.bytes.len() {
-            return Some(self.bytes[self.position]);
+            Ok(self.bytes[self.position])
+        } else {
+            Err(LexerError::EndOfFile)
         }
-        None
     }
 
-    pub fn consume_comment(&mut self) {
+    pub fn consume_comment(&mut self) -> Result<()> {
         loop {
-            if let Some(byte) = self.get_next_char() {
-                self.position += 1;
-                if byte == b'*' {
-                    if let Some(next) = self.get_next_char() {
-                        if next == b'/' {
-                            self.position += 1;
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
+            let byte = self.get_next_char()?;
+            self.position += 1;
+            if byte == b'*' {
+                let next = self.get_next_char()?;
+                if next == b'/' {
+                    self.position += 1;
+                    return Ok(());
                 }
-            } else {
-                break;
             }
         }
     }
 
-    pub fn consumue_character(&mut self, first_byte: u8, mut num_flag: bool) -> Token {
+    pub fn consumue_character(&mut self, first_byte: u8, mut num_flag: bool) -> Result<Token> {
         let mut temp_vec: Vec<u8> = Vec::new();
         temp_vec.push(first_byte);
         loop {
-            if let Some(byte) = self.get_next_char() {
-                let break_flg = match byte {
-                    b'0'...b'9' => {
-                        self.position += 1;
-                        temp_vec.push(byte);
-                        false
-                    }
-                    b'a'...b'z' | b'A'...b'Z' => {
-                        self.position += 1;
-                        temp_vec.push(byte);
-                        num_flag = false;
-                        false
-                    }
-                    _ => true,
-                };
-
-                if break_flg == true {
-                    break;
+            let byte = self.get_next_char()?;
+            let break_flg = match byte {
+                b'0'...b'9' => {
+                    self.position += 1;
+                    temp_vec.push(byte);
+                    false
                 }
-            } else {
+                b'a'...b'z' | b'A'...b'Z' => {
+                    self.position += 1;
+                    temp_vec.push(byte);
+                    num_flag = false;
+                    false
+                }
+                _ => true,
+            };
+
+            if break_flg == true {
                 break;
             }
         }
@@ -113,202 +118,193 @@ impl<'a> Lexer<'a> {
             TokenType::Identifier
         };
 
-        self.create_token_by_value(token_type, temp_vec)
+        Ok(self.create_token_by_value(token_type, temp_vec)?)
     }
 
-    pub fn create_token_by_value(&mut self, token: TokenType, value_vec: Vec<u8>) -> Token {
-        let ret_string = String::from_utf8(value_vec).unwrap();
-        Token::new(
+    pub fn create_token_by_value(&mut self, token: TokenType, value_vec: Vec<u8>) -> Result<Token> {
+        let ret_string = String::from_utf8(value_vec).map_err(|_| {
+            return LexerError::InvalidSyntax;
+        })?;
+        Ok(Token::new(
             self.handle_reserved_word(&ret_string, token),
             ret_string.to_owned(),
             self.current_row,
-        )
+        ))
     }
 
-    pub fn consume_slash(&mut self, target_token: Token) -> (Token, bool) {
-        if let Some(next) = self.get_next_char() {
-            if next == b'*' {
-                self.position += 1;
-                self.consume_comment();
-                return (target_token, false);
-            }
-        }
-        (
-            self.create_token_by_value(TokenType::Divide, vec![b'/']),
-            true,
-        )
+    pub fn consume_slash(&mut self, target_token: Token) -> Result<(Token, bool)> {
+        Ok(if self.get_next_char()? == b'*' {
+            self.position += 1;
+            self.consume_comment()?;
+            (target_token, false)
+        } else {
+            (
+                self.create_token_by_value(TokenType::Divide, vec![b'/'])?,
+                true,
+            )
+        })
     }
 
-    pub fn consume_equal(&mut self) -> Token {
-        if let Some(next) = self.get_next_char() {
-            if next == b'=' {
-                self.position += 1;
-                return self.create_token_by_value(TokenType::Eq, vec![b'=', b'=']);
-            }
-        }
-        self.create_token_by_value(TokenType::Assign, vec![b'='])
+    pub fn consume_equal(&mut self) -> Result<Token> {
+        Ok(if self.get_next_char()? == b'=' {
+            self.position += 1;
+            self.create_token_by_value(TokenType::Eq, vec![b'=', b'='])?
+        } else {
+            self.create_token_by_value(TokenType::Assign, vec![b'='])?
+        })
     }
 
-    pub fn consume_ban(&mut self) -> Token {
-        if let Some(next) = self.get_next_char() {
-            if next == b'=' {
-                self.position += 1;
-                return self.create_token_by_value(TokenType::NotEq, vec![b'!', b'=']);
-            }
-        }
-        self.create_token_by_value(TokenType::Bang, vec![b'!'])
+    pub fn consume_ban(&mut self) -> Result<Token> {
+        Ok(if self.get_next_char()? == b'=' {
+            self.position += 1;
+            self.create_token_by_value(TokenType::NotEq, vec![b'!', b'='])?
+        } else {
+            self.create_token_by_value(TokenType::Bang, vec![b'!'])?
+        })
     }
 
-    pub fn consume_lt(&mut self) -> Token {
-        if let Some(next) = self.get_next_char() {
-            if next == b'=' {
-                self.position += 1;
-                return self.create_token_by_value(TokenType::Lte, vec![b'<', b'=']);
-            }
-        }
-        self.create_token_by_value(TokenType::Lt, vec![b'<'])
+    pub fn consume_lt(&mut self) -> Result<Token> {
+        Ok(if self.get_next_char()? == b'=' {
+            self.position += 1;
+            self.create_token_by_value(TokenType::Lte, vec![b'<', b'='])?
+        } else {
+            self.create_token_by_value(TokenType::Lt, vec![b'<'])?
+        })
     }
 
-    pub fn consume_gt(&mut self) -> Token {
-        if let Some(next) = self.get_next_char() {
-            if next == b'=' {
-                self.position += 1;
-                return self.create_token_by_value(TokenType::Gte, vec![b'>', b'=']);
-            }
-        }
-        self.create_token_by_value(TokenType::Gt, vec![b'>'])
+    pub fn consume_gt(&mut self) -> Result<Token> {
+        Ok(if self.get_next_char()? == b'=' {
+            self.position += 1;
+            self.create_token_by_value(TokenType::Gte, vec![b'>', b'='])?
+        } else {
+            self.create_token_by_value(TokenType::Gt, vec![b'>'])?
+        })
     }
 
-    pub fn consume_string(&mut self) -> Token {
+    pub fn consume_string(&mut self) -> Result<Token> {
         let mut char_vec = Vec::new();
         loop {
-            if let Some(next_char) = self.get_next_char() {
-                self.position += 1;
-                if next_char == b'"' {
-                    break;
+            let next_char = self.get_next_char()?;
+            self.position += 1;
+            if next_char == b'"' {
+                break;
+            }
+            char_vec.push(next_char);
+        }
+        let string_length = char_vec.len();
+        Ok(self.create_token_by_value(TokenType::String(string_length), char_vec)?)
+    }
+
+    pub fn next_token(&mut self) -> Result<Token> {
+        let mut ret_val: Token = self.create_eof_token();
+        loop {
+            let byte = self.get_next_char()?;
+            self.position += 1;
+            let flag = match byte {
+                b'0'...b'9' => {
+                    ret_val = self.consumue_character(byte, true)?;
+                    true
                 }
-                char_vec.push(next_char);
-            } else {
+                b'a'...b'z' | b'A'...b'Z' => {
+                    ret_val = self.consumue_character(byte, false)?;
+                    true
+                }
+                b'"' => {
+                    ret_val = self.consume_string()?;
+                    true
+                }
+                b'/' => {
+                    let (temp_ret, flag) = self.consume_slash(ret_val)?;
+                    ret_val = temp_ret;
+                    flag
+                }
+                b'=' => {
+                    ret_val = self.consume_equal()?;
+                    true
+                }
+                b',' => {
+                    ret_val = self.create_token_by_value(TokenType::Comma, vec![byte])?;
+                    true
+                }
+                b'.' => {
+                    ret_val = self.create_token_by_value(TokenType::Period, vec![byte])?;
+                    true
+                }
+                b'{' => {
+                    ret_val = self.create_token_by_value(TokenType::Lbrace, vec![byte])?;
+                    true
+                }
+                b'}' => {
+                    ret_val = self.create_token_by_value(TokenType::Rbrace, vec![byte])?;
+                    true
+                }
+                b'(' => {
+                    ret_val = self.create_token_by_value(TokenType::Lparen, vec![byte])?;
+                    true
+                }
+                b')' => {
+                    ret_val = self.create_token_by_value(TokenType::Rparen, vec![byte])?;
+                    true
+                }
+                b'[' => {
+                    ret_val = self.create_token_by_value(TokenType::Lbracket, vec![byte])?;
+                    true
+                }
+                b']' => {
+                    ret_val = self.create_token_by_value(TokenType::Rbracket, vec![byte])?;
+                    true
+                }
+                b'!' => {
+                    ret_val = self.consume_ban()?;
+                    true
+                }
+                b'*' => {
+                    ret_val = self.create_token_by_value(TokenType::Multiply, vec![byte])?;
+                    true
+                }
+                b'%' => {
+                    ret_val = self.create_token_by_value(TokenType::Rem, vec![byte])?;
+                    true
+                }
+                b'+' => {
+                    ret_val = self.create_token_by_value(TokenType::Plus, vec![byte])?;
+                    true
+                }
+                b'-' => {
+                    ret_val = self.create_token_by_value(TokenType::Minus, vec![byte])?;
+                    true
+                }
+                b'<' => {
+                    ret_val = self.consume_lt()?;
+                    true
+                }
+                b'>' => {
+                    ret_val = self.consume_gt()?;
+                    true
+                }
+                b':' => {
+                    ret_val = self.create_token_by_value(TokenType::Colon, vec![byte])?;
+                    true
+                }
+                b';' => {
+                    ret_val = self.create_token_by_value(TokenType::Semicolon, vec![byte])?;
+                    true
+                }
+                b'\n' | b'\r' => {
+                    self.current_row += 1;
+                    false
+                }
+                b' ' => false,
+                _ => {
+                    panic!("{} cannot be handled.", byte);
+                }
+            };
+
+            if flag == true {
                 break;
             }
         }
-        let string_length = char_vec.len();
-        self.create_token_by_value(TokenType::String(string_length), char_vec)
-    }
-
-    pub fn next_token(&mut self) -> Option<Token> {
-        let mut ret_val: Token = self.create_eof_token();
-        loop {
-            if let Some(byte) = self.get_next_char() {
-                self.position += 1;
-                let flag = match byte {
-                    b'0'...b'9' => {
-                        ret_val = self.consumue_character(byte, true);
-                        true
-                    }
-                    b'a'...b'z' | b'A'...b'Z' => {
-                        ret_val = self.consumue_character(byte, false);
-                        true
-                    }
-                    b'"' => {
-                        ret_val = self.consume_string();
-                        true
-                    }
-                    b'/' => {
-                        let (temp_ret, flag) = self.consume_slash(ret_val);
-                        ret_val = temp_ret;
-                        flag
-                    }
-                    b'=' => {
-                        ret_val = self.consume_equal();
-                        true
-                    }
-                    b',' => {
-                        ret_val = self.create_token_by_value(TokenType::Comma, vec![byte]);
-                        true
-                    }
-                    b'.' => {
-                        ret_val = self.create_token_by_value(TokenType::Period, vec![byte]);
-                        true
-                    }
-                    b'{' => {
-                        ret_val = self.create_token_by_value(TokenType::Lbrace, vec![byte]);
-                        true
-                    }
-                    b'}' => {
-                        ret_val = self.create_token_by_value(TokenType::Rbrace, vec![byte]);
-                        true
-                    }
-                    b'(' => {
-                        ret_val = self.create_token_by_value(TokenType::Lparen, vec![byte]);
-                        true
-                    }
-                    b')' => {
-                        ret_val = self.create_token_by_value(TokenType::Rparen, vec![byte]);
-                        true
-                    }
-                    b'[' => {
-                        ret_val = self.create_token_by_value(TokenType::Lbracket, vec![byte]);
-                        true
-                    }
-                    b']' => {
-                        ret_val = self.create_token_by_value(TokenType::Rbracket, vec![byte]);
-                        true
-                    }
-                    b'!' => {
-                        ret_val = self.consume_ban();
-                        true
-                    }
-                    b'*' => {
-                        ret_val = self.create_token_by_value(TokenType::Multiply, vec![byte]);
-                        true
-                    }
-                    b'%' => {
-                        ret_val = self.create_token_by_value(TokenType::Rem, vec![byte]);
-                        true
-                    }
-                    b'+' => {
-                        ret_val = self.create_token_by_value(TokenType::Plus, vec![byte]);
-                        true
-                    }
-                    b'-' => {
-                        ret_val = self.create_token_by_value(TokenType::Minus, vec![byte]);
-                        true
-                    }
-                    b'<' => {
-                        ret_val = self.consume_lt();
-                        true
-                    }
-                    b'>' => {
-                        ret_val = self.consume_gt();
-                        true
-                    }
-                    b':' => {
-                        ret_val = self.create_token_by_value(TokenType::Colon, vec![byte]);
-                        true
-                    }
-                    b';' => {
-                        ret_val = self.create_token_by_value(TokenType::Semicolon, vec![byte]);
-                        true
-                    }
-                    b'\n' | b'\r' => {
-                        self.current_row += 1;
-                        false
-                    }
-                    b' ' => false,
-                    _ => {
-                        panic!("{} cannot be handled.", byte);
-                    }
-                };
-
-                if flag == true {
-                    break;
-                }
-            } else {
-                return None;
-            }
-        }
-        Some(ret_val)
+        Ok(ret_val)
     }
 }
 

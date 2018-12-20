@@ -47,8 +47,8 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
-        let current_token = lexer.next_token();
-        let peek_token = lexer.next_token();
+        let current_token = lexer.next_token().ok();
+        let peek_token = lexer.next_token().ok();
 
         Parser {
             lexer: lexer,
@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
 
     pub fn next_token(&mut self) {
         self.cur_token = self.peek_token.to_owned();
-        self.peek_token = self.lexer.next_token();
+        self.peek_token = self.lexer.next_token().ok();
     }
 
     pub fn save_rewind_position(&mut self) {
