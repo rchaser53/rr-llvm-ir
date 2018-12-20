@@ -523,7 +523,7 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-        let parameters = self.parse_function_parameters();
+        let (idents, symbol_types) = self.parse_function_parameters();
         let return_type = self.parse_return_type();
 
         if self.expect_peek(TokenType::Lbrace) == false {
@@ -532,28 +532,28 @@ impl<'a> Parser<'a> {
 
         if let Some(body) = self.parse_block_statement() {
             return Some(Expression::Function {
-                parameters,
+                parameters: idents,
                 body,
                 location: Location::new(self.lexer.current_row),
-                return_type,
+                symbol_type: SymbolType::Function(symbol_types, Box::new(return_type)),
             });
         }
         None
     }
 
-    pub fn parse_function_parameters(&mut self) -> Vec<(Identifier, SymbolType)> {
-        let mut parameters = Vec::new();
+    pub fn parse_function_parameters(&mut self) -> (Vec<Identifier>, Vec<Box<SymbolType>>) {
+        let mut idents = Vec::new();
+        let mut symbol_types = Vec::new();
 
         if self.peek_token_is(TokenType::Rparen) {
             self.next_token();
-            return Vec::new();
+            return (idents, symbol_types);
         }
         self.next_token();
 
         if let Some(token) = self.cur_token.to_owned() {
-            let name = token.value.to_owned();
-            let symbol = self.extract_symbol_type(token);
-            parameters.push((Identifier(name), symbol));
+            idents.push(Identifier(token.value.to_owned()));
+            symbol_types.push(Box::new(self.extract_symbol_type(token)));
 
             if self.expect_peek(TokenType::Colon) == false {
                 self.emit_error_for_funciton();
@@ -569,9 +569,8 @@ impl<'a> Parser<'a> {
             self.next_token();
 
             if let Some(token) = self.cur_token.to_owned() {
-                let name = token.value.to_owned();
-                let symbol = self.extract_symbol_type(token);
-                parameters.push((Identifier(name), symbol));
+                idents.push(Identifier(token.value.to_owned()));
+                symbol_types.push(Box::new(self.extract_symbol_type(token)));
             }
 
             if self.expect_peek(TokenType::Colon) == false {
@@ -587,7 +586,7 @@ impl<'a> Parser<'a> {
             self.emit_error_for_funciton();
         }
 
-        parameters
+        (idents, symbol_types)
     }
 
     pub fn parse_return_type(&mut self) -> SymbolType {
