@@ -38,9 +38,9 @@ create_err_2!(
     "could not parse sufix {:?} as integer. row: {:?}"
 );
 
-pub fn else_next_token(err: LexerError) -> Result<Token> {
+pub fn else_next_token(err: CompilerError) -> Result<Token> {
     match err {
-        LexerError::EndOfFile => Ok(Token::new(TokenType::Null, String::new(), 0)),
+        CompilerError::EndOfFile => Ok(Token::new(TokenType::Null, String::new(), 0)),
         _ => Err(err),
     }
 }
@@ -161,7 +161,7 @@ impl<'a> Parser<'a> {
         let name = Identifier(token.value.to_owned());
 
         if self.expect_peek(TokenType::Assign)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         self.next_token()?;
@@ -176,14 +176,14 @@ impl<'a> Parser<'a> {
 
     pub fn parse_let_statement(&mut self) -> Result<Statement> {
         if self.expect_peek(TokenType::Identifier)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
         let token = self.cur_token.to_owned();
         let name = Identifier(token.value.to_owned());
         let symbol_type = self.parse_identifier_symbol_type()?;
 
         if self.expect_peek(TokenType::Assign)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         self.next_token()?;
@@ -198,7 +198,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_identifier_symbol_type(&mut self) -> Result<SymbolType> {
         if self.peek_token_is(TokenType::Colon) == false {
-            return Err(LexerError::InvalidSyntax)?;
+            return Err(CompilerError::DeclareType(self.peek_token.value.to_string()))?;
         }
         self.next_token()?;
 
@@ -212,7 +212,7 @@ impl<'a> Parser<'a> {
         self.next_token()?;
 
         if self.peek_token_is(TokenType::Rbracket) == false {
-            return Err(LexerError::InvalidSyntax)?;
+            return Err(CompilerError::InvalidParserSyntax)?;
         }
         self.next_token()?;
 
@@ -232,17 +232,17 @@ impl<'a> Parser<'a> {
 
     pub fn parse_while_statement(&mut self) -> Result<Statement> {
         if self.expect_peek(TokenType::Lparen)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
         self.next_token()?;
 
         let condition = self.parse_expression(Precedences::Lowest)?;
         if self.expect_peek(TokenType::Rparen)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         if self.expect_peek(TokenType::Lbrace)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         let block = self.parse_block_statement()?;
@@ -257,16 +257,16 @@ impl<'a> Parser<'a> {
 
         while loop_flag {
             if self.expect_peek(TokenType::Lparen)? == false {
-                return Err(LexerError::InvalidSyntax);
+                return Err(CompilerError::InvalidParserSyntax);
             }
             self.next_token()?;
             condtions.push(self.parse_expression(Precedences::Lowest)?);
 
             if self.expect_peek(TokenType::Rparen)? == false {
-                return Err(LexerError::InvalidSyntax);
+                return Err(CompilerError::InvalidParserSyntax);
             }
             if self.expect_peek(TokenType::Lbrace)? == false {
-                return Err(LexerError::InvalidSyntax);
+                return Err(CompilerError::InvalidParserSyntax);
             }
 
             bodies.push(self.parse_block_statement()?);
@@ -281,7 +281,7 @@ impl<'a> Parser<'a> {
             self.next_token()?;
             condtions.push(Expression::Boolean(true, Location::new(if_row)));
             if self.expect_peek(TokenType::Lbrace)? == false {
-                return Err(LexerError::InvalidSyntax);
+                return Err(CompilerError::InvalidParserSyntax);
             }
             bodies.push(self.parse_block_statement()?);
         } else {
@@ -381,7 +381,7 @@ impl<'a> Parser<'a> {
             TokenType::True | TokenType::False => self.parse_boolean(),
             _ => {
                 self.no_prefix_parse_fn_error(token)?;
-                Err(LexerError::InvalidSyntax)
+                Err(CompilerError::InvalidParserSyntax)
             }
         }
     }
@@ -405,7 +405,7 @@ impl<'a> Parser<'a> {
             _ => {
                 self.errors
                     .push(parse_sufix_error(token.token_type, token.current_row));
-                return Err(LexerError::InvalidSyntax);
+                return Err(CompilerError::InvalidParserSyntax);
             }
         };
         self.next_token()?;
@@ -440,20 +440,20 @@ impl<'a> Parser<'a> {
                 "could not parse {} as integer. row: {}",
                 token.value, token.current_row
             ));
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         };
     }
 
     pub fn parse_function_literal(&mut self) -> Result<Expression> {
         if self.expect_peek(TokenType::Lparen)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         let (idents, symbol_types) = self.parse_function_parameters()?;
         let return_type = self.parse_return_type()?;
 
         if self.expect_peek(TokenType::Lbrace)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
 
         Ok(Expression::Function {
@@ -570,7 +570,7 @@ impl<'a> Parser<'a> {
         let exp = self.parse_expression(Precedences::Lowest)?;
 
         if self.expect_peek(TokenType::Rparen)? == false {
-            return Err(LexerError::InvalidSyntax);
+            return Err(CompilerError::InvalidParserSyntax);
         }
         Ok(exp)
     }
@@ -664,7 +664,7 @@ impl<'a> Parser<'a> {
                     "{:?} is not a token for infix. row: {}",
                     token.token_type, token.current_row
                 ));
-                Err(LexerError::InvalidSyntax)
+                Err(CompilerError::InvalidParserSyntax)
             }
         }
     }
@@ -679,7 +679,7 @@ impl<'a> Parser<'a> {
                     "{:?} is not a token for prefix. row: {}",
                     token.token_type, token.current_row
                 ));
-                Err(LexerError::InvalidSyntax)
+                Err(CompilerError::InvalidParserSyntax)
             }
         }
     }
@@ -762,7 +762,7 @@ impl<'a> Parser<'a> {
         match token.token_type {
             TokenType::Identifier => Ok(SymbolType::Custom(token.value)),
             TokenType::PrimaryType(symbol_type) => Ok(symbol_type),
-            _ => Err(LexerError::InvalidSyntax),
+            _ => Err(CompilerError::InvalidParserSyntax),
         }
     }
 }

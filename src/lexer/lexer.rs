@@ -4,15 +4,21 @@ use crate::lexer::token::*;
 use crate::types::symbol::*;
 
 #[derive(Fail, Debug)]
-pub enum LexerError {
+pub enum CompilerError {
     #[fail(display = "")]
     EndOfFile,
 
     #[fail(display = "invalid syntax for lexer")]
     InvalidSyntax,
+
+    #[fail(display = "need to delcare type after {}", _0)]
+    DeclareType(String),
+
+    #[fail(display = "invalid syntax for parser")]
+    InvalidParserSyntax,
 }
 
-pub type Result<T> = result::Result<T, LexerError>;
+pub type Result<T> = result::Result<T, CompilerError>;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -69,7 +75,7 @@ impl<'a> Lexer<'a> {
         if self.position < self.bytes.len() {
             Ok(self.bytes[self.position])
         } else {
-            Err(LexerError::EndOfFile)
+            Err(CompilerError::EndOfFile)
         }
     }
 
@@ -123,7 +129,7 @@ impl<'a> Lexer<'a> {
 
     pub fn create_token_by_value(&mut self, token: TokenType, value_vec: Vec<u8>) -> Result<Token> {
         let ret_string = String::from_utf8(value_vec).map_err(|_| {
-            return LexerError::InvalidSyntax;
+            return CompilerError::InvalidSyntax;
         })?;
         Ok(Token::new(
             self.handle_reserved_word(&ret_string, token),
