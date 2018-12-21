@@ -47,6 +47,8 @@ pub enum TokenType {
     Multiply, // *
     Rem,      // %
     Bang,     // !
+
+    Null, // for Parser::new
 }
 
 #[derive(Clone, Debug)]

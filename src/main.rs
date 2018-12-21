@@ -11,6 +11,7 @@ extern crate linked_hash_map;
 
 use std::fs::File;
 use std::io::prelude::*;
+use std::*;
 
 use clap::{App, Arg};
 
@@ -26,7 +27,7 @@ use types::walker::*;
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";
 
-fn read_file(file_name: &str) -> Result<String, String> {
+fn read_file(file_name: &str) -> result::Result<String, String> {
     if let Ok(mut file) = File::open(file_name) {
         let mut contents = String::new();
         let _ = file
@@ -51,9 +52,9 @@ fn main() {
     match read_file(input_file_name) {
         Ok(input) => {
             let mut lexer = Lexer::new(&input);
-            let mut parser = Parser::new(&mut lexer);
+            let mut parser = Parser::new(&mut lexer).expect("failed to parse");
 
-            let statements = parser.parse_program();
+            let statements = parser.parse_program().expect("failed to parse");
             if parser.has_error() {
                 panic!("{}", parser.emit_error());
             }

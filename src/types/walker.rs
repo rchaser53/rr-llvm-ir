@@ -64,7 +64,7 @@ impl Walker {
 
 #[allow(dead_code)]
 pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
-    let statements = parse_input(input);
+    let statements = parse_input(input).unwrap();
     let mut walker = Walker::new();
     walker.walk(statements);
     walker.symbol_tables

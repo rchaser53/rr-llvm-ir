@@ -12,7 +12,7 @@ pub enum LexerError {
     InvalidSyntax,
 }
 
-type Result<T> = result::Result<T, LexerError>;
+pub type Result<T> = result::Result<T, LexerError>;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
