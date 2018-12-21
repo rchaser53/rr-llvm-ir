@@ -289,6 +289,10 @@ impl<'a> Parser<'a> {
             bodies.push(Vec::new());
         };
 
+        while self.peek_token_is(TokenType::Semicolon) {
+            self.next_token()?;
+        }
+
         Ok(Statement::If {
             conditions: condtions,
             bodies: bodies,
@@ -862,7 +866,7 @@ fn if_else_parsing() {
     let input = r#"
   if(a > b) {};
   if(a > b) { return 1; };
-  // if(a > b) { return 1; } else { return 0; };
+  if(a > b) { return 1; } else { return 0; };
 "#;
     let program = parse_input(input).unwrap();
     statement_assert(&program[0], "if((a > b)) {  } elseif(false) {  }");
