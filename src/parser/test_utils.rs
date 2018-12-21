@@ -8,12 +8,7 @@ use crate::parser::statements::*;
 /* below the test implementation */
 #[allow(dead_code)]
 pub fn statement_assert(statement: &Statement, expect: &str) {
-    assert!(
-        statement.string() == expect,
-        "\r\nexpected: {:?} \r\nactual: {:?}",
-        expect,
-        statement.string()
-    );
+    assert_eq!(statement.string(), expect);
 }
 
 #[allow(dead_code)]
@@ -33,9 +28,7 @@ pub fn parse_and_emit_error(input: &str, error_stack: Vec<&str>) -> Result<()> {
         panic!("no errors found. return program is {:?}", program);
     }
 
-    assert!(
-        parser.emit_error() == error_stack.join("\n"),
-        "\r\nexpected: {:?} \r\nactual: {:?}",
+    assert_eq!(
         parser.emit_error(),
         error_stack.join("\n")
     );

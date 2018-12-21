@@ -72,12 +72,8 @@ pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
 
 pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
     let actual = symbol.string();
-    assert!(
-        actual == expected,
-        format!(
-            "failed to assert \nexpected: {} \nactual: {}",
-            expected, actual
-        )
+    assert_eq!(
+        actual, expected
     );
 }
 

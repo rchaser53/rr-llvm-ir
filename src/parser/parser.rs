@@ -947,7 +947,7 @@ fn wrong_prefix() {
 
     return > 3;
   "#;
-    parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
+    let _ = parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
 }
 
 #[test]
