@@ -55,14 +55,14 @@ impl Walker {
     }
 
     pub fn resolve_current_ident(&mut self, ident: String) -> SymbolType {
-      if let Some(symbol_table) = self.symbol_tables.last_mut() {
-        if let Some(symbol) = &mut symbol_table.resolve(&ident) {
-          return symbol.symbol_type.clone();
-        } else {
-          panic!("{} is not defined", ident);
+        if let Some(symbol_table) = self.symbol_tables.last_mut() {
+            if let Some(symbol) = &mut symbol_table.resolve(&ident) {
+                return symbol.symbol_type.clone();
+            } else {
+                panic!("{} is not defined", ident);
+            }
         }
-      }
-      unreachable!();
+        unreachable!();
     }
 
     pub fn resolve_prefix_expr_type(&mut self, prefix: Prefix, expr: Expression) -> SymbolType {
@@ -75,38 +75,38 @@ impl Walker {
 
 #[cfg(test)]
 mod tests {
-  use crate::parser::test_utils::*;
-  use crate::types::walker::*;
+    use crate::parser::test_utils::*;
+    use crate::types::walker::*;
 
-  pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
-      let statements = parse_input(input).unwrap();
-      let mut walker = Walker::new();
-      walker.walk(statements);
-      walker.symbol_tables
-  }
+    pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
+        let statements = parse_input(input).unwrap();
+        let mut walker = Walker::new();
+        walker.walk(statements);
+        walker.symbol_tables
+    }
 
-  pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
-      let actual = symbol.string();
-      assert_eq!(actual, expected);
-  }
+    pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
+        let actual = symbol.string();
+        assert_eq!(actual, expected);
+    }
 
-  #[test]
-  fn let_int() {
-      let input = r#"
+    #[test]
+    fn let_int() {
+        let input = r#"
     let a: int = 1;
   "#;
-      let mut tables = walk_ast(input);
-      assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
-  }
+        let tables = walk_ast(input);
+        assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+    }
 
-  #[test]
-  fn use_identfier() {
-      let input = r#"
+    #[test]
+    fn use_identfier() {
+        let input = r#"
     let a: int = 1;
     let b: int = a;
   "#;
-      let mut tables = walk_ast(input);
-      assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
-      assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
-  }
+        let tables = walk_ast(input);
+        assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+        assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
+    }
 }

@@ -1,17 +1,27 @@
+use std::rc::Rc;
+use std::rc::Weak;
+
 use linked_hash_map::LinkedHashMap;
 
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
-    pub enclosing_scope: Box<Option<SymbolTable>>,
+    pub enclosing_scope: Weak<SymbolTable>,
     pub symbols: LinkedHashMap<String, Symbol>,
     pub scope_name: String,
 }
 
 impl SymbolTable {
     pub fn new(name: &str, scope: Option<SymbolTable>) -> Self {
+        let enclosing_scope = if let Some(actual_scope) = scope {
+            let scope = Rc::new(actual_scope);
+            Rc::downgrade(&scope)
+        } else {
+            Weak::new()
+        };
+
         SymbolTable {
             symbols: SymbolTable::initialize(),
-            enclosing_scope: Box::new(scope),
+            enclosing_scope,
             scope_name: name.to_string(),
         }
     }
@@ -42,15 +52,15 @@ impl SymbolTable {
         symbols
     }
 
-    pub fn resolve(&mut self, name: &str) -> Option<Symbol> {
+    pub fn resolve(&self, name: &str) -> Option<Symbol> {
         if let Some(symbol) = self.symbols.get(name) {
             return Some(symbol.clone());
         };
 
-        if let Some(mut scope) = *(self.enclosing_scope.clone()) {
-            return scope.resolve(name);
+        if let Some(upgraded) = self.enclosing_scope.upgrade() {
+            upgraded.resolve(name)
         } else {
-            return None;
+            None
         }
     }
 
