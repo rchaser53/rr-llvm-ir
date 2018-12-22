@@ -104,7 +104,7 @@ impl<'a> Lexer<'a> {
                     temp_vec.push(byte);
                     false
                 }
-                b'a'...b'z' | b'A'...b'Z' => {
+                b'a'...b'z' | b'A'...b'Z' | b'_' => {
                     self.position += 1;
                     temp_vec.push(byte);
                     num_flag = false;
@@ -211,7 +211,7 @@ impl<'a> Lexer<'a> {
                     ret_val = self.consumue_character(byte, true)?;
                     true
                 }
-                b'a'...b'z' | b'A'...b'Z' => {
+                b'a'...b'z' | b'A'...b'Z' | b'_' => {
                     ret_val = self.consumue_character(byte, false)?;
                     true
                 }
@@ -339,11 +339,11 @@ mod tests {
     fn identifier() {
         let mut lexer = Lexer::new(
             r#"
-    123 abc 45d6
+    123 ab_c 45d6
     "#,
         );
         lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "ab_c");
         lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "45d6");
     }
 
