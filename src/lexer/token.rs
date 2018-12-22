@@ -5,7 +5,6 @@ pub enum TokenType {
     Integer,
     String(usize),
     Identifier,
-    Boolean,
     PrimaryType(SymbolType),
 
     Eof,
