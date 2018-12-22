@@ -3,7 +3,6 @@ use crate::types::symbol::*;
 use crate::parser::expressions::*;
 use crate::parser::prefix::*;
 use crate::parser::statements::*;
-use crate::parser::test_utils::*;
 
 #[derive(Debug)]
 pub struct Walker {
@@ -62,26 +61,29 @@ impl Walker {
     }
 }
 
-#[allow(dead_code)]
-pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
-    let statements = parse_input(input).unwrap();
-    let mut walker = Walker::new();
-    walker.walk(statements);
-    walker.symbol_tables
-}
+#[cfg(test)]
+mod tests {
+  use crate::parser::test_utils::*;
+  use crate::types::walker::*;
 
-pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
-    let actual = symbol.string();
-    assert_eq!(
-        actual, expected
-    );
-}
+  pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
+      let statements = parse_input(input).unwrap();
+      let mut walker = Walker::new();
+      walker.walk(statements);
+      walker.symbol_tables
+  }
 
-#[test]
-fn let_int() {
-    let input = r#"
-  let a: int = 1;
-"#;
-    let mut tables = walk_ast(input);
-    assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+  pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
+      let actual = symbol.string();
+      assert_eq!(actual, expected);
+  }
+
+  #[test]
+  fn let_int() {
+      let input = r#"
+    let a: int = 1;
+  "#;
+      let mut tables = walk_ast(input);
+      assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+  }
 }

@@ -9,7 +9,6 @@ use crate::parser::precedence::*;
 use crate::parser::prefix::*;
 use crate::parser::statements::*;
 use crate::parser::sufix::*;
-use crate::parser::test_utils::*;
 
 use crate::types::symbol::*;
 
@@ -198,7 +197,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_identifier_symbol_type(&mut self) -> Result<SymbolType> {
         if self.peek_token_is(TokenType::Colon) == false {
-            return Err(CompilerError::DeclareType(self.peek_token.value.to_string()))?;
+            return Err(CompilerError::DeclareType(
+                self.peek_token.value.to_string(),
+            ))?;
         }
         self.next_token()?;
 
@@ -767,194 +768,200 @@ impl<'a> Parser<'a> {
     }
 }
 
-#[test]
-fn let_statements() {
-    let input = r#"
-    let x: int = 5;
-    let y: boolean = false;
-    let z: string = "abc";
-    let foobar: int = 939393;
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils::*;
+
+    #[test]
+    fn let_statements() {
+        let input = r#"
+      let x: int = 5;
+      let y: boolean = false;
+      let z: string = "abc";
+      let foobar: int = 939393;
+    "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let x: int = 5");
+        statement_assert(&program[1], "let y: boolean = false");
+        statement_assert(&program[2], r#"let z: string = "abc""#);
+        statement_assert(&program[3], "let foobar: int = 939393");
+    }
+
+    #[test]
+    fn return_statements() {
+        let input = r#"
+      return 5;
+      return 10;
+      return 939393;
+    "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "return 5");
+        statement_assert(&program[1], "return 10");
+        statement_assert(&program[2], "return 939393");
+    }
+
+    #[test]
+    fn while_statements() {
+        let input = r#"
+    while (true) {
+      let i: int = i + 1;
+    }
+    let a: int = 3;
   "#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "let x: int = 5");
-    statement_assert(&program[1], "let y: boolean = false");
-    statement_assert(&program[2], r#"let z: string = "abc""#);
-    statement_assert(&program[3], "let foobar: int = 939393");
-}
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "while (true) { let i: int = (i + 1) }");
+    }
 
-#[test]
-fn return_statements() {
-    let input = r#"
-    return 5;
-    return 10;
-    return 939393;
+    #[test]
+    fn assign_statements() {
+        let input = r#"
+      let x: int = 5;
+      x = 10;
+      x = 10 * 3;
+    "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let x: int = 5");
+        statement_assert(&program[1], "x = 10");
+        statement_assert(&program[2], "x = (10 * 3)");
+    }
+
+    #[test]
+    fn assign_aggregate_statements() {
+        let input = r#"
+      let x: int[] = [1, 2, 3];
+      x[0] = 10;
+    "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let x: int[] = [1, 2, 3]");
+        statement_assert(&program[1], "x[0] = 10");
+    }
+
+    #[test]
+    fn operator_precedence_parsing() {
+        let input = r#"
+    -a * b;
+    !-a;
+    a + b + c;
+    a + b - c;
+    a * b * c;
+    a * b / c;
+    a + b / c;
+    a + b * c + d / e - f;
+    3 + 4 - 5 * 5;
+    5 > 4 == 3 < 4;
+    5 < 4 != 3 > 4;
+    3 + 4 * 5 == 3 * 1 + 4 * 5;
   "#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "return 5");
-    statement_assert(&program[1], "return 10");
-    statement_assert(&program[2], "return 939393");
-}
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "((-a) * b)");
+        statement_assert(&program[1], "(!(-a))");
+        statement_assert(&program[2], "((a + b) + c)");
+        statement_assert(&program[3], "((a + b) - c)");
+        statement_assert(&program[4], "((a * b) * c)");
+        statement_assert(&program[5], "((a * b) / c)");
+        statement_assert(&program[6], "(a + (b / c))");
+        statement_assert(&program[7], "(((a + (b * c)) + (d / e)) - f)");
+        statement_assert(&program[8], "((3 + 4) - (5 * 5))");
+        statement_assert(&program[9], "((5 > 4) == (3 < 4))");
+        statement_assert(&program[10], "((5 < 4) != (3 > 4))");
+        statement_assert(&program[11], "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))");
+    }
 
-#[test]
-fn while_statements() {
-    let input = r#"
-  while (true) {
-    let i: int = i + 1;
-  }
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "while (true) { let i: int = (i + 1) }");
-}
-
-#[test]
-fn assign_statements() {
-    let input = r#"
-    let x: int = 5;
-    x = 10;
-    x = 10 * 3;
+    #[test]
+    fn if_else_parsing() {
+        let input = r#"
+    if(a > b) {};
+    if(a > b) { return 1; };
+    if(a > b) { return 1; } else { return 0; };
   "#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "let x: int = 5");
-    statement_assert(&program[1], "x = 10");
-    statement_assert(&program[2], "x = (10 * 3)");
-}
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "if((a > b)) {  } elseif(false) {  }");
+        statement_assert(&program[1], "if((a > b)) { return 1 } elseif(false) {  }");
+        statement_assert(
+            &program[2],
+            "if((a > b)) { return 1 } elseif(true) { return 0 }",
+        );
+    }
 
-#[test]
-fn assign_aggregate_statements() {
-    let input = r#"
-    let x: int[] = [1, 2, 3];
-    x[0] = 10;
+    #[test]
+    fn boolean_parsing() {
+        let input = r#"
+    true;
+    false;
+    3 > 5 == false;
+    3 < 5 == true;
   "#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "let x: int[] = [1, 2, 3]");
-    statement_assert(&program[1], "x[0] = 10");
-}
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "true");
+        statement_assert(&program[1], "false");
+        statement_assert(&program[2], "((3 > 5) == false)");
+        statement_assert(&program[3], "((3 < 5) == true)");
+    }
 
-#[test]
-fn operator_precedence_parsing() {
-    let input = r#"
-  -a * b;
-  !-a;
-  a + b + c;
-  a + b - c;
-  a * b * c;
-  a * b / c;
-  a + b / c;
-  a + b * c + d / e - f;
-  3 + 4 - 5 * 5;
-  5 > 4 == 3 < 4;
-  5 < 4 != 3 > 4;
-  3 + 4 * 5 == 3 * 1 + 4 * 5;
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "((-a) * b)");
-    statement_assert(&program[1], "(!(-a))");
-    statement_assert(&program[2], "((a + b) + c)");
-    statement_assert(&program[3], "((a + b) - c)");
-    statement_assert(&program[4], "((a * b) * c)");
-    statement_assert(&program[5], "((a * b) / c)");
-    statement_assert(&program[6], "(a + (b / c))");
-    statement_assert(&program[7], "(((a + (b * c)) + (d / e)) - f)");
-    statement_assert(&program[8], "((3 + 4) - (5 * 5))");
-    statement_assert(&program[9], "((5 > 4) == (3 < 4))");
-    statement_assert(&program[10], "((5 < 4) != (3 > 4))");
-    statement_assert(&program[11], "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))");
-}
-
-#[test]
-fn if_else_parsing() {
-    let input = r#"
-  if(a > b) {};
-  if(a > b) { return 1; };
-  if(a > b) { return 1; } else { return 0; };
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "if((a > b)) {  } elseif(false) {  }");
-    statement_assert(&program[1], "if((a > b)) { return 1 } elseif(false) {  }");
-    statement_assert(
-        &program[2],
-        "if((a > b)) { return 1 } elseif(true) { return 0 }",
-    );
-}
-
-#[test]
-fn boolean_parsing() {
-    let input = r#"
-  true;
-  false;
-  3 > 5 == false;
-  3 < 5 == true;
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "true");
-    statement_assert(&program[1], "false");
-    statement_assert(&program[2], "((3 > 5) == false)");
-    statement_assert(&program[3], "((3 < 5) == true)");
-}
-
-#[test]
-fn array_parsing() {
-    let input = r#"
-  [1, 2, 3];
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "[1, 2, 3]");
-}
-
-#[test]
-fn array_element_parsing() {
-    let input = r#"
-    let a: int[] = [1, 2, 3];
-    a[1];
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "let a: int[] = [1, 2, 3]");
-    statement_assert(&program[1], "a[1]");
-}
-
-#[test]
-fn funciton_parsing() {
-    let input = r#"
-  fn(): null {};
-  fn(x: int): int {};
-  fn(x: int, y: boolean, z: string): boolean {};
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "fn() {  }");
-    statement_assert(&program[1], "fn(x) {  }");
-    statement_assert(&program[2], "fn(x, y, z) {  }");
-}
-
-#[test]
-fn call_parsing() {
-    let input = r#"
-  a + add(b * c) + d;
-  add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
-  add(a + b + c * d / f + g);
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "((a + add((b * c))) + d)");
-    statement_assert(
-        &program[1],
-        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
-    );
-    statement_assert(&program[2], "add((((a + b) + ((c * d) / f)) + g))");
-}
-
-#[test]
-fn wrong_prefix() {
-    let input = r#"
-
-    return > 3;
+    #[test]
+    fn array_parsing() {
+        let input = r#"
+    [1, 2, 3];
   "#;
-    let _ = parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
-}
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "[1, 2, 3]");
+    }
 
-#[test]
-fn sufix_parsing() {
-    let input = r#"
-    a++;
-"#;
-    let program = parse_input(input).unwrap();
-    statement_assert(&program[0], "(a++)");
+    #[test]
+    fn array_element_parsing() {
+        let input = r#"
+      let a: int[] = [1, 2, 3];
+      a[1];
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let a: int[] = [1, 2, 3]");
+        statement_assert(&program[1], "a[1]");
+    }
+
+    #[test]
+    fn funciton_parsing() {
+        let input = r#"
+    fn(): null {};
+    fn(x: int): int {};
+    fn(x: int, y: boolean, z: string): boolean {};
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "fn() {  }");
+        statement_assert(&program[1], "fn(x) {  }");
+        statement_assert(&program[2], "fn(x, y, z) {  }");
+    }
+
+    #[test]
+    fn call_parsing() {
+        let input = r#"
+    a + add(b * c) + d;
+    add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
+    add(a + b + c * d / f + g);
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "((a + add((b * c))) + d)");
+        statement_assert(
+            &program[1],
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        );
+        statement_assert(&program[2], "add((((a + b) + ((c * d) / f)) + g))");
+    }
+
+    #[test]
+    fn wrong_prefix() {
+        let input = r#"
+
+      return > 3;
+    "#;
+        let _ = parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
+    }
+
+    #[test]
+    fn sufix_parsing() {
+        let input = r#"
+      a++;
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "(a++)");
+    }
 }

@@ -314,170 +314,172 @@ impl<'a> Lexer<'a> {
     }
 }
 
-// below is test implementation
+#[cfg(test)]
+mod tests {
+    use crate::lexer::lexer::*;
 
-#[allow(dead_code)]
-fn lexer_assert(token: Token, token_type: TokenType, value: &str) {
-    let expected = Token::new(token_type, value.to_string(), 0);
-    assert_eq!(
-        token, expected
-    );
-}
+    #[allow(dead_code)]
+    fn lexer_assert(token: Token, token_type: TokenType, value: &str) {
+        let expected = Token::new(token_type, value.to_string(), 0);
+        assert_eq!(token, expected);
+    }
 
-#[test]
-fn digit() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn digit() {
+        let mut lexer = Lexer::new(
+            r#"
     123 456
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
+    }
 
-#[test]
-fn identifier() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn identifier() {
+        let mut lexer = Lexer::new(
+            r#"
     123 abc 45d6
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "45d6");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "45d6");
+    }
 
-#[test]
-fn string() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn string() {
+        let mut lexer = Lexer::new(
+            r#"
     "abc" "def3"
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::String(3), "abc");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::String(4), "def3");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::String(3), "abc");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::String(4), "def3");
+    }
 
-#[test]
-fn array() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn array() {
+        let mut lexer = Lexer::new(
+            r#"
     [ 1, 2, 3 ]
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Lbracket, "[");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "1");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Comma, ",");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "2");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Comma, ",");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "3");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Rbracket, "]");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Lbracket, "[");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "1");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Comma, ",");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "2");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Comma, ",");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "3");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Rbracket, "]");
+    }
 
-#[test]
-fn comment() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn comment() {
+        let mut lexer = Lexer::new(
+            r#"
     0 /* 123 */ 2
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "0");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "2");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "0");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "2");
+    }
 
-#[test]
-fn ban() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn ban() {
+        let mut lexer = Lexer::new(
+            r#"
     let abc = !abc
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Let, "let");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Assign, "=");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Bang, "!");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Let, "let");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Assign, "=");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Bang, "!");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Identifier, "abc");
+    }
 
-#[test]
-fn division_multiple() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn division_multiple() {
+        let mut lexer = Lexer::new(
+            r#"
     1 / 323 * 3 / 2
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "1");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Divide, "/");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "323");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Multiply, "*");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "3");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "1");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Divide, "/");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "323");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Multiply, "*");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "3");
+    }
 
-#[test]
-fn gt() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn gt() {
+        let mut lexer = Lexer::new(
+            r#"
     123 <= 456
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Lte, "<=");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Lte, "<=");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
+    }
 
-#[test]
-fn if_test() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn if_test() {
+        let mut lexer = Lexer::new(
+            r#"
     if 123 == 456
     "#,
-    );
-    lexer_assert(lexer.next_token().unwrap(), TokenType::If, "if");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
-}
+        );
+        lexer_assert(lexer.next_token().unwrap(), TokenType::If, "if");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "456");
+    }
 
-#[test]
-fn llvm_token_test() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn llvm_token_test() {
+        let mut lexer = Lexer::new(
+            r#"
     int string boolean null
     "#,
-    );
-    lexer_assert(
-        lexer.next_token().unwrap(),
-        TokenType::PrimaryType(SymbolType::Integer),
-        "int",
-    );
-    lexer_assert(
-        lexer.next_token().unwrap(),
-        TokenType::PrimaryType(SymbolType::String),
-        "string",
-    );
-    lexer_assert(
-        lexer.next_token().unwrap(),
-        TokenType::PrimaryType(SymbolType::Boolean),
-        "boolean",
-    );
-    lexer_assert(
-        lexer.next_token().unwrap(),
-        TokenType::PrimaryType(SymbolType::Null),
-        "null",
-    );
-}
+        );
+        lexer_assert(
+            lexer.next_token().unwrap(),
+            TokenType::PrimaryType(SymbolType::Integer),
+            "int",
+        );
+        lexer_assert(
+            lexer.next_token().unwrap(),
+            TokenType::PrimaryType(SymbolType::String),
+            "string",
+        );
+        lexer_assert(
+            lexer.next_token().unwrap(),
+            TokenType::PrimaryType(SymbolType::Boolean),
+            "boolean",
+        );
+        lexer_assert(
+            lexer.next_token().unwrap(),
+            TokenType::PrimaryType(SymbolType::Null),
+            "null",
+        );
+    }
 
-#[test]
-fn rewind_test() {
-    let mut lexer = Lexer::new(
-        r#"
+    #[test]
+    fn rewind_test() {
+        let mut lexer = Lexer::new(
+            r#"
     123 == 456
     "#,
-    );
+        );
 
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
-    lexer.save_rewind_position();
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
-    lexer.rewind_position();
-    lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Integer, "123");
+        lexer.save_rewind_position();
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
+        lexer.rewind_position();
+        lexer_assert(lexer.next_token().unwrap(), TokenType::Eq, "==");
+    }
+
 }

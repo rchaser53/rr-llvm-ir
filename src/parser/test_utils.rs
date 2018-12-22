@@ -28,10 +28,7 @@ pub fn parse_and_emit_error(input: &str, error_stack: Vec<&str>) -> Result<()> {
         panic!("no errors found. return program is {:?}", program);
     }
 
-    assert_eq!(
-        parser.emit_error(),
-        error_stack.join("\n")
-    );
+    assert_eq!(parser.emit_error(), error_stack.join("\n"));
 
     Ok(())
 }
