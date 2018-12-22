@@ -39,8 +39,9 @@ impl Walker {
         }
     }
 
-    pub fn resolve_expr_type(&self, expr: Expression) -> SymbolType {
+    pub fn resolve_expr_type(&mut self, expr: Expression) -> SymbolType {
         match expr {
+            Expression::Identifier(Identifier(string), _) => self.resolve_current_ident(string),
             Expression::IntegerLiteral(_, _) => SymbolType::Integer,
             Expression::StringLiteral(_, _) => SymbolType::String,
             Expression::Boolean(_, _) => SymbolType::Boolean,
@@ -53,7 +54,18 @@ impl Walker {
         }
     }
 
-    pub fn resolve_prefix_expr_type(&self, prefix: Prefix, expr: Expression) -> SymbolType {
+    pub fn resolve_current_ident(&mut self, ident: String) -> SymbolType {
+      if let Some(symbol_table) = self.symbol_tables.last_mut() {
+        if let Some(symbol) = &mut symbol_table.resolve(&ident) {
+          return symbol.symbol_type.clone();
+        } else {
+          panic!("{} is not defined", ident);
+        }
+      }
+      unreachable!();
+    }
+
+    pub fn resolve_prefix_expr_type(&mut self, prefix: Prefix, expr: Expression) -> SymbolType {
         match prefix {
             Prefix::Bang => SymbolType::Boolean,
             _ => self.resolve_expr_type(expr),
@@ -85,5 +97,16 @@ mod tests {
   "#;
       let mut tables = walk_ast(input);
       assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+  }
+
+  #[test]
+  fn use_identfier() {
+      let input = r#"
+    let a: int = 1;
+    let b: int = a;
+  "#;
+      let mut tables = walk_ast(input);
+      assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+      assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
   }
 }
