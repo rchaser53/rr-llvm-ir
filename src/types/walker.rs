@@ -1,3 +1,4 @@
+use crate::types::error::*;
 use crate::types::symbol::*;
 
 use crate::parser::expressions::*;
@@ -33,18 +34,28 @@ impl Walker {
 
     pub fn walk_let(&mut self, ident: Identifier, expr: Expression) {
         let ident_name = ident.0.as_ref();
-        let symbol_type = self.resolve_expr_type(expr);
-        if let Some(table) = self.symbol_tables.last_mut() {
-            table.define(ident_name, Symbol::new(ident_name, symbol_type, false));
-        }
+        match self.resolve_expr_type(expr) {
+            Ok(symbol_type) => {
+                if let Some(table) = self.symbol_tables.last_mut() {
+                    let _ = table
+                        .define(ident_name, Symbol::new(ident_name, symbol_type, false))
+                        .map_err(|err| {
+                            self.error_stack.push(format!("{:?}", err));
+                        });
+                }
+            }
+            Err(err) => {
+                self.error_stack.push(format!("{:?}", err));
+            }
+        };
     }
 
-    pub fn resolve_expr_type(&mut self, expr: Expression) -> SymbolType {
+    pub fn resolve_expr_type(&mut self, expr: Expression) -> Result<SymbolType> {
         match expr {
             Expression::Identifier(Identifier(string), _) => self.resolve_current_ident(string),
-            Expression::IntegerLiteral(_, _) => SymbolType::Integer,
-            Expression::StringLiteral(_, _) => SymbolType::String,
-            Expression::Boolean(_, _) => SymbolType::Boolean,
+            Expression::IntegerLiteral(_, _) => Ok(SymbolType::Integer),
+            Expression::StringLiteral(_, _) => Ok(SymbolType::String),
+            Expression::Boolean(_, _) => Ok(SymbolType::Boolean),
             Expression::Prefix(prefix, boxed_exp, _) => {
                 self.resolve_prefix_expr_type(prefix, *boxed_exp)
             }
@@ -54,20 +65,21 @@ impl Walker {
         }
     }
 
-    pub fn resolve_current_ident(&mut self, ident: String) -> SymbolType {
-        if let Some(symbol_table) = self.symbol_tables.last_mut() {
-            if let Some(symbol) = &mut symbol_table.resolve(&ident) {
-                return symbol.symbol_type.clone();
-            } else {
-                panic!("{} is not defined", ident);
-            }
+    pub fn resolve_current_ident(&mut self, ident: String) -> Result<SymbolType> {
+        let symbol_table = self.symbol_tables.last_mut().unwrap();
+        match symbol_table.resolve(&ident) {
+            Ok(symbol) => Ok(symbol.symbol_type.clone()),
+            Err(_) => Err(SymbolError::UndefinedSymbol(ident)),
         }
-        unreachable!();
     }
 
-    pub fn resolve_prefix_expr_type(&mut self, prefix: Prefix, expr: Expression) -> SymbolType {
+    pub fn resolve_prefix_expr_type(
+        &mut self,
+        prefix: Prefix,
+        expr: Expression,
+    ) -> Result<SymbolType> {
         match prefix {
-            Prefix::Bang => SymbolType::Boolean,
+            Prefix::Bang => Ok(SymbolType::Boolean),
             _ => self.resolve_expr_type(expr),
         }
     }
@@ -78,11 +90,11 @@ mod tests {
     use crate::parser::test_utils::*;
     use crate::types::walker::*;
 
-    pub fn walk_ast(input: &str) -> Vec<SymbolTable> {
+    pub fn walk_ast(input: &str) -> Walker {
         let statements = parse_input(input).unwrap();
         let mut walker = Walker::new();
         walker.walk(statements);
-        walker.symbol_tables
+        walker
     }
 
     pub fn assert_symbol_tables(symbol: &Symbol, expected: &str) {
@@ -95,7 +107,7 @@ mod tests {
         let input = r#"
     let a: int = 1;
   "#;
-        let tables = walk_ast(input);
+        let tables = walk_ast(input).symbol_tables;
         assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
     }
 
@@ -105,7 +117,7 @@ mod tests {
     let a: int = 1;
     let b: int = a;
   "#;
-        let tables = walk_ast(input);
+        let tables = walk_ast(input).symbol_tables;
         assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
         assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
     }

@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::rc::Weak;
-use std::collections::HashMap;
 
+use crate::types::error::*;
 
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
@@ -52,20 +53,22 @@ impl SymbolTable {
         symbols
     }
 
-    pub fn resolve(&self, name: &str) -> Option<Symbol> {
+    pub fn resolve(&self, name: &str) -> Result<Symbol> {
         if let Some(symbol) = self.symbols.get(name) {
-            return Some(symbol.clone());
+            return Ok(symbol.clone());
         };
 
         if let Some(upgraded) = self.enclosing_scope.upgrade() {
             upgraded.resolve(name)
         } else {
-            None
+            Err(SymbolError::UndefinedSymbol(name.to_string()))
         }
     }
 
-    pub fn define(&mut self, key: &str, symbol: Symbol) -> Option<Symbol> {
-        self.symbols.insert(key.to_string(), symbol)
+    pub fn define(&mut self, key: &str, symbol: Symbol) -> Result<Symbol> {
+        self.symbols
+            .insert(key.to_string(), symbol)
+            .ok_or(SymbolError::AlreadyUsedSymbol(key.to_string()))
     }
 }
 
