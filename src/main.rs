@@ -7,7 +7,6 @@ extern crate lazy_static;
 extern crate clap;
 extern crate inkwell;
 extern crate libc;
-extern crate linked_hash_map;
 
 use std::fs::File;
 use std::io::prelude::*;

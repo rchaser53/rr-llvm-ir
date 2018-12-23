@@ -1,12 +1,12 @@
 use std::rc::Rc;
 use std::rc::Weak;
+use std::collections::HashMap;
 
-use linked_hash_map::LinkedHashMap;
 
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
     pub enclosing_scope: Weak<SymbolTable>,
-    pub symbols: LinkedHashMap<String, Symbol>,
+    pub symbols: HashMap<String, Symbol>,
     pub scope_name: String,
 }
 
@@ -26,8 +26,8 @@ impl SymbolTable {
         }
     }
 
-    pub fn initialize() -> LinkedHashMap<String, Symbol> {
-        let mut symbols = LinkedHashMap::new();
+    pub fn initialize() -> HashMap<String, Symbol> {
+        let mut symbols = HashMap::new();
         symbols.insert(
             String::from("int"),
             Symbol::new("int", SymbolType::Integer, true),
