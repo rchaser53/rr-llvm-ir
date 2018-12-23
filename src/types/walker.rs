@@ -96,18 +96,16 @@ impl Walker {
         body: Vec<Statement>,
         return_type: SymbolType,
     ) -> Result<SymbolType> {
-        if let Some(last_table) =  self.symbol_tables.last() {
-          let new_scope = SymbolTable::new("test", Some(last_table.clone()));
-          self.symbol_tables.push(new_scope);
-          self.walk(body);
+        if let Some(last_table) = self.symbol_tables.last() {
+            let new_scope = SymbolTable::new("test", Some(last_table.clone()));
+            self.symbol_tables.push(new_scope);
+            self.walk(body);
 
-          return Ok(
-            SymbolType::Function(
-              parameters, 
-              Box::new(return_type),
-              Box::new(self.symbol_tables.pop().unwrap())
-            )
-          );
+            return Ok(SymbolType::Function(
+                parameters,
+                Box::new(return_type),
+                Box::new(self.symbol_tables.pop().unwrap()),
+            ));
         }
         unreachable!();
     }

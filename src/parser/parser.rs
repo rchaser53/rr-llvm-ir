@@ -472,26 +472,29 @@ impl<'a> Parser<'a> {
             self.next_token()?;
             return Ok(symbols);
         }
-        self.next_token()?;
-        symbols.push(
-          Box::new(self.extract_symbol(self.cur_token.to_owned())?)
-        );
+        let name = self.peek_token.value.to_string();
 
+        self.next_token()?;
         if self.expect_peek(TokenType::Colon)? == false {
             self.emit_error_for_funciton()?;
         }
         self.next_token()?;
 
+        symbols.push(Box::new(
+            self.extract_symbol(name, self.cur_token.to_owned())?,
+        ));
+
         while self.peek_token_is(TokenType::Comma) {
             self.next_token()?;
             self.next_token()?;
-            symbols.push(
-              Box::new(self.extract_symbol(self.cur_token.to_owned())?)
-            );
+            let name = self.cur_token.value.to_string();
 
             if self.expect_peek(TokenType::Colon)? == false {
                 self.emit_error_for_funciton()?;
             }
+            symbols.push(Box::new(
+                self.extract_symbol(name, self.peek_token.to_owned())?,
+            ));
 
             self.next_token()?;
         }
@@ -756,12 +759,8 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub fn extract_symbol(&mut self, token: Token) -> Result<Symbol> {
-        Ok(Symbol::new(
-            &token.value.to_string(),
-            self.extract_symbol_type(token)?,
-            false,
-        ))
+    pub fn extract_symbol(&mut self, name: String, token: Token) -> Result<Symbol> {
+        Ok(Symbol::new(&name, self.extract_symbol_type(token)?, false))
     }
 
     pub fn extract_symbol_type(&mut self, token: Token) -> Result<SymbolType> {
