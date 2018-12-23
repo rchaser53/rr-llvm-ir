@@ -63,10 +63,10 @@ impl<'a> Lexer<'a> {
             "else" => TokenType::Else,
             "return" => TokenType::Return,
             "break" => TokenType::Break,
-            "boolean" => TokenType::PrimaryType(SymbolType::Boolean),
-            "int" => TokenType::PrimaryType(SymbolType::Integer),
-            "string" => TokenType::PrimaryType(SymbolType::String),
-            "null" => TokenType::PrimaryType(SymbolType::Null),
+            "boolean" => TokenType::PrimaryType(PrimaryType::Boolean),
+            "int" => TokenType::PrimaryType(PrimaryType::Integer),
+            "string" => TokenType::PrimaryType(PrimaryType::String),
+            "null" => TokenType::PrimaryType(PrimaryType::Null),
             _ => token,
         }
     }
@@ -447,22 +447,22 @@ mod tests {
         );
         lexer_assert(
             lexer.next_token().unwrap(),
-            TokenType::PrimaryType(SymbolType::Integer),
+            TokenType::PrimaryType(PrimaryType::Integer),
             "int",
         );
         lexer_assert(
             lexer.next_token().unwrap(),
-            TokenType::PrimaryType(SymbolType::String),
+            TokenType::PrimaryType(PrimaryType::String),
             "string",
         );
         lexer_assert(
             lexer.next_token().unwrap(),
-            TokenType::PrimaryType(SymbolType::Boolean),
+            TokenType::PrimaryType(PrimaryType::Boolean),
             "boolean",
         );
         lexer_assert(
             lexer.next_token().unwrap(),
-            TokenType::PrimaryType(SymbolType::Null),
+            TokenType::PrimaryType(PrimaryType::Null),
             "null",
         );
     }

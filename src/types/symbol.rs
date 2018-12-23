@@ -11,6 +11,12 @@ pub struct SymbolTable {
     pub scope_name: String,
 }
 
+impl PartialEq for SymbolTable {
+    fn eq(&self, other: &SymbolTable) -> bool {
+        self.scope_name == other.scope_name // TBD: need to fix
+    }
+}
+
 impl SymbolTable {
     pub fn new(name: &str, scope: Option<SymbolTable>) -> Self {
         let enclosing_scope = if let Some(actual_scope) = scope {
@@ -31,23 +37,23 @@ impl SymbolTable {
         let mut symbols = HashMap::new();
         symbols.insert(
             String::from("int"),
-            Symbol::new("int", SymbolType::Integer, true),
+            Symbol::new("int", SymbolType::Primary(PrimaryType::Integer), true),
         );
         symbols.insert(
             String::from("float"),
-            Symbol::new("float", SymbolType::Float, true),
+            Symbol::new("float", SymbolType::Primary(PrimaryType::Float), true),
         );
         symbols.insert(
             String::from("string"),
-            Symbol::new("string", SymbolType::String, true),
+            Symbol::new("string", SymbolType::Primary(PrimaryType::String), true),
         );
         symbols.insert(
             String::from("bool"),
-            Symbol::new("bool", SymbolType::Boolean, true),
+            Symbol::new("bool", SymbolType::Primary(PrimaryType::Boolean), true),
         );
         symbols.insert(
             String::from("void"),
-            Symbol::new("void", SymbolType::Void, true),
+            Symbol::new("void", SymbolType::Primary(PrimaryType::Void), true),
         );
 
         symbols
@@ -73,7 +79,7 @@ impl SymbolTable {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,
     pub symbol_type: SymbolType,
@@ -92,14 +98,14 @@ impl Symbol {
     pub fn string(&self) -> String {
         let name = self.name.to_owned();
         match &self.symbol_type {
-            SymbolType::Integer => format!("{}: int", name),
-            SymbolType::Float => format!("{}: float", name),
-            SymbolType::String => format!("{}: string", name),
-            SymbolType::Boolean => format!("{}: boolean", name),
-            SymbolType::Void => format!("{}: void", name),
-            SymbolType::Null => format!("{}: null", name),
+            SymbolType::Primary(PrimaryType::Integer) => format!("{}: int", name),
+            SymbolType::Primary(PrimaryType::Float) => format!("{}: float", name),
+            SymbolType::Primary(PrimaryType::String) => format!("{}: string", name),
+            SymbolType::Primary(PrimaryType::Boolean) => format!("{}: boolean", name),
+            SymbolType::Primary(PrimaryType::Void) => format!("{}: void", name),
+            SymbolType::Primary(PrimaryType::Null) => format!("{}: null", name),
             SymbolType::Array(boxed_type) => format!("{}: {}[]", name, boxed_type.string()),
-            SymbolType::Function(args, return_type) => {
+            SymbolType::Function(args, return_type, _) => {
                 let arg_types_string: String = args
                     .iter()
                     .map(|arg| arg.string())
@@ -112,35 +118,42 @@ impl Symbol {
                     return_type.string()
                 )
             }
+            SymbolType::Scope(scope) => format!("scope: {}", scope.scope_name),
             SymbolType::Custom(custom_name) => format!("{}: {}", name, custom_name),
         }
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SymbolType {
+    Primary(PrimaryType),
+    Array(Box<SymbolType>),
+    Function(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
+    Scope(Box<SymbolTable>),
+    Custom(String),
+}
+
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
+pub enum PrimaryType {
     Integer,
     Float,
     String,
     Boolean,
     Void,
     Null,
-    Array(Box<SymbolType>),
-    Function(Vec<Box<SymbolType>>, Box<SymbolType>),
-    Custom(String),
 }
 
 impl SymbolType {
     pub fn string(&self) -> String {
         match self {
-            SymbolType::Integer => String::from("int"),
-            SymbolType::Float => String::from("float"),
-            SymbolType::String => String::from("string"),
-            SymbolType::Boolean => String::from("boolean"),
-            SymbolType::Void => String::from("void"),
-            SymbolType::Null => String::from("null"),
+            SymbolType::Primary(PrimaryType::Integer) => String::from("int"),
+            SymbolType::Primary(PrimaryType::Float) => String::from("float"),
+            SymbolType::Primary(PrimaryType::String) => String::from("string"),
+            SymbolType::Primary(PrimaryType::Boolean) => String::from("boolean"),
+            SymbolType::Primary(PrimaryType::Void) => String::from("void"),
+            SymbolType::Primary(PrimaryType::Null) => String::from("null"),
             SymbolType::Array(boxed_type) => format!("{}[]", boxed_type.string()),
-            SymbolType::Function(args, return_type) => {
+            SymbolType::Function(args, return_type, _) => {
                 let arg_types_string: String = args
                     .iter()
                     .map(|arg| arg.string())
@@ -148,6 +161,7 @@ impl SymbolType {
                     .join(", ");
                 format!("function({}): {}", arg_types_string, return_type.string())
             }
+            SymbolType::Scope(scope) => scope.scope_name.to_string(),
             SymbolType::Custom(name) => name.to_string(),
         }
     }

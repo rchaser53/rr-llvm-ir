@@ -450,7 +450,7 @@ impl<'a> Parser<'a> {
             return Err(CompilerError::InvalidParserSyntax);
         }
 
-        let (idents, symbol_types) = self.parse_function_parameters()?;
+        let parameter_symbols = self.parse_function_parameters()?;
         let return_type = self.parse_return_type()?;
 
         if self.expect_peek(TokenType::Lbrace)? == false {
@@ -458,26 +458,24 @@ impl<'a> Parser<'a> {
         }
 
         Ok(Expression::Function {
-            parameters: idents,
+            parameter_symbols,
             body: self.parse_block_statement()?,
             location: Location::new(self.lexer.current_row),
-            symbol_type: SymbolType::Function(symbol_types, Box::new(return_type)),
+            return_type,
         })
     }
 
-    pub fn parse_function_parameters(&mut self) -> Result<(Vec<Identifier>, Vec<Box<SymbolType>>)> {
-        let mut idents = Vec::new();
-        let mut symbol_types = Vec::new();
+    pub fn parse_function_parameters(&mut self) -> Result<Vec<Box<Symbol>>> {
+        let mut symbols = Vec::new();
 
         if self.peek_token_is(TokenType::Rparen) {
             self.next_token()?;
-            return Ok((idents, symbol_types));
+            return Ok(symbols);
         }
         self.next_token()?;
-
-        let token = self.cur_token.to_owned();
-        idents.push(Identifier(token.value.to_owned()));
-        symbol_types.push(Box::new(self.extract_symbol_type(token)?));
+        symbols.push(
+          Box::new(self.extract_symbol(self.cur_token.to_owned())?)
+        );
 
         if self.expect_peek(TokenType::Colon)? == false {
             self.emit_error_for_funciton()?;
@@ -487,10 +485,9 @@ impl<'a> Parser<'a> {
         while self.peek_token_is(TokenType::Comma) {
             self.next_token()?;
             self.next_token()?;
-
-            let token = self.cur_token.to_owned();
-            idents.push(Identifier(token.value.to_owned()));
-            symbol_types.push(Box::new(self.extract_symbol_type(token)?));
+            symbols.push(
+              Box::new(self.extract_symbol(self.cur_token.to_owned())?)
+            );
 
             if self.expect_peek(TokenType::Colon)? == false {
                 self.emit_error_for_funciton()?;
@@ -503,7 +500,7 @@ impl<'a> Parser<'a> {
             self.emit_error_for_funciton()?;
         }
 
-        Ok((idents, symbol_types))
+        Ok(symbols)
     }
 
     pub fn parse_return_type(&mut self) -> Result<SymbolType> {
@@ -759,10 +756,18 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub fn extract_symbol_type(&self, token: Token) -> Result<SymbolType> {
-        match token.token_type {
-            TokenType::Identifier => Ok(SymbolType::Custom(token.value)),
-            TokenType::PrimaryType(symbol_type) => Ok(symbol_type),
+    pub fn extract_symbol(&mut self, token: Token) -> Result<Symbol> {
+        Ok(Symbol::new(
+            &token.value.to_string(),
+            self.extract_symbol_type(token)?,
+            false,
+        ))
+    }
+
+    pub fn extract_symbol_type(&mut self, token: Token) -> Result<SymbolType> {
+        match &token.token_type {
+            TokenType::Identifier => Ok(SymbolType::Custom(token.value.to_string())),
+            TokenType::PrimaryType(parimary_type) => Ok(SymbolType::Primary(parimary_type.clone())),
             _ => Err(CompilerError::InvalidParserSyntax),
         }
     }

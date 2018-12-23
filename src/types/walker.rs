@@ -53,14 +53,20 @@ impl Walker {
     pub fn resolve_expr_type(&mut self, expr: Expression) -> Result<SymbolType> {
         match expr {
             Expression::Identifier(Identifier(string), _) => self.resolve_current_ident(string),
-            Expression::IntegerLiteral(_, _) => Ok(SymbolType::Integer),
-            Expression::StringLiteral(_, _) => Ok(SymbolType::String),
-            Expression::Boolean(_, _) => Ok(SymbolType::Boolean),
+            Expression::IntegerLiteral(_, _) => Ok(SymbolType::Primary(PrimaryType::Integer)),
+            Expression::StringLiteral(_, _) => Ok(SymbolType::Primary(PrimaryType::String)),
+            Expression::Boolean(_, _) => Ok(SymbolType::Primary(PrimaryType::Boolean)),
             Expression::Prefix(prefix, boxed_exp, _) => {
                 self.resolve_prefix_expr_type(prefix, *boxed_exp)
             }
             Expression::Infix(_, boxed_exp, _, _) => self.resolve_expr_type(*boxed_exp),
             Expression::Sufix(_, boxed_exp, _) => self.resolve_expr_type(*boxed_exp),
+            Expression::Function {
+                parameter_symbols,
+                body,
+                return_type,
+                ..
+            } => self.resolve_function(parameter_symbols, body, return_type),
             _ => unreachable!(),
         }
     }
@@ -79,9 +85,31 @@ impl Walker {
         expr: Expression,
     ) -> Result<SymbolType> {
         match prefix {
-            Prefix::Bang => Ok(SymbolType::Boolean),
+            Prefix::Bang => Ok(SymbolType::Primary(PrimaryType::Boolean)),
             _ => self.resolve_expr_type(expr),
         }
+    }
+
+    pub fn resolve_function(
+        &mut self,
+        parameters: Vec<Box<Symbol>>,
+        body: Vec<Statement>,
+        return_type: SymbolType,
+    ) -> Result<SymbolType> {
+        if let Some(last_table) =  self.symbol_tables.last() {
+          let new_scope = SymbolTable::new("test", Some(last_table.clone()));
+          self.symbol_tables.push(new_scope);
+          self.walk(body);
+
+          return Ok(
+            SymbolType::Function(
+              parameters, 
+              Box::new(return_type),
+              Box::new(self.symbol_tables.pop().unwrap())
+            )
+          );
+        }
+        unreachable!();
     }
 }
 
@@ -130,8 +158,8 @@ mod tests {
   "#;
         let walker = walk_ast(input);
         assert_eq!(
-          &walker.error_stack.join(""),
-          &format!("{:?}", SymbolError::AlreadyUsedSymbol(String::from("a")))
+            &walker.error_stack.join(""),
+            &format!("{:?}", SymbolError::AlreadyUsedSymbol(String::from("a")))
         );
     }
 }

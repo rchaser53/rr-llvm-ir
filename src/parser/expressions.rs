@@ -20,9 +20,9 @@ pub enum Expression {
     Infix(Infix, Box<Expression>, Box<Expression>, Location),
     Sufix(Sufix, Box<Expression>, Location),
     Function {
-        parameters: Vec<(Identifier)>,
+        parameter_symbols: Vec<Box<Symbol>>,
         body: BlockStatement,
-        symbol_type: SymbolType,
+        return_type: SymbolType,
         location: Location,
     },
     Call(Call),
@@ -75,14 +75,16 @@ impl Expression {
             }
             Expression::Sufix(sufix, left, _location) => format!("({}{})", left.string(), sufix),
             Expression::Function {
-                parameters, body, ..
+                parameter_symbols,
+                body,
+                ..
             } => {
                 let mut param_string = String::new();
-                for (index, Identifier(ref string)) in parameters.iter().enumerate() {
+                for (index, symbol) in parameter_symbols.iter().enumerate() {
                     if index == 0 {
-                        param_string.push_str(&format!("{}", string));
+                        param_string.push_str(&format!("{}", symbol.name));
                     } else {
-                        param_string.push_str(&format!(", {}", string));
+                        param_string.push_str(&format!(", {}", symbol.name));
                     }
                 }
                 let mut ret_string = String::new();
