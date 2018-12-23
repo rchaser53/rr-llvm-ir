@@ -65,10 +65,11 @@ impl SymbolTable {
         }
     }
 
-    pub fn define(&mut self, key: &str, symbol: Symbol) -> Result<Symbol> {
-        self.symbols
-            .insert(key.to_string(), symbol)
-            .ok_or(SymbolError::AlreadyUsedSymbol(key.to_string()))
+    pub fn define(&mut self, key: &str, symbol: Symbol) -> Result<()> {
+        match self.symbols.insert(key.to_string(), symbol) {
+            Some(_) => Err(SymbolError::AlreadyUsedSymbol(key.to_string())),
+            None => Ok(()),
+        }
     }
 }
 

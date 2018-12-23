@@ -121,4 +121,17 @@ mod tests {
         assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
         assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
     }
+
+    #[test]
+    fn already_used_identify() {
+        let input = r#"
+    let a: int = 1;
+    let a: int = 1;
+  "#;
+        let walker = walk_ast(input);
+        assert_eq!(
+          &walker.error_stack.join(""),
+          &format!("{:?}", SymbolError::AlreadyUsedSymbol(String::from("a")))
+        );
+    }
 }
