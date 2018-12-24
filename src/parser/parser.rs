@@ -774,9 +774,9 @@ impl<'a> Parser<'a> {
 
                     while self.peek_token_is(TokenType::Comma) {
                         self.next_token()?;
+                        self.next_token()?;
                         symbols.push(Box::new(self.extract_symbol_type()?))
                     }
-                    self.next_token()?;
                     self.next_token()?;
                     symbols
                 };
@@ -966,9 +966,13 @@ mod tests {
     fn declare_function() {
         let input = r#"
     let a: fn(): int = 1;
+    let b: fn(int): string = 1;
+    let c: fn(int, bool): void = 1;
   "#;
         let program = parse_input(input).unwrap();
         statement_assert(&program[0], "let a: fn(): int = 1");
+        statement_assert(&program[1], "let b: fn(int): string = 1");
+        statement_assert(&program[2], "let c: fn(int, bool): void = 1");
     }
 
     #[test]
