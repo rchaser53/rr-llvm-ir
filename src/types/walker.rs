@@ -32,9 +32,9 @@ impl Walker {
         }
     }
 
-    pub fn walk_let(&mut self, ident: Identifier, expr: Expression, symbol_type: SymbolType) {
+    pub fn walk_let(&mut self, ident: Identifier, expr: Expression, left: SymbolType) {
         let ident_name = ident.0.as_ref();
-        match self.resolve_expr_type(expr, symbol_type) {
+        match self.resolve_expr_type(expr, left) {
             Ok(symbol_type) => {
                 if let Some(table) = self.symbol_tables.last_mut() {
                     let _ = table
@@ -50,49 +50,39 @@ impl Walker {
         };
     }
 
-    pub fn resolve_expr_type(
-        &mut self,
-        expr: Expression,
-        symbol_type: SymbolType,
-    ) -> Result<SymbolType> {
+    pub fn resolve_expr_type(&mut self, expr: Expression, left: SymbolType) -> Result<SymbolType> {
         match expr {
             Expression::Identifier(Identifier(string), _) => {
-                self.resolve_current_ident(string, symbol_type)
+                self.resolve_current_ident(string, left)
             }
             Expression::IntegerLiteral(_, _) => {
-                self.match_symbol_type(symbol_type, SymbolType::Primary(PrimaryType::Integer))
+                self.match_symbol_type(left, SymbolType::Primary(PrimaryType::Integer))
             }
             Expression::StringLiteral(_, _) => {
-                self.match_symbol_type(symbol_type, SymbolType::Primary(PrimaryType::String))
+                self.match_symbol_type(left, SymbolType::Primary(PrimaryType::String))
             }
             Expression::Boolean(_, _) => {
-                self.match_symbol_type(symbol_type, SymbolType::Primary(PrimaryType::Boolean))
+                self.match_symbol_type(left, SymbolType::Primary(PrimaryType::Boolean))
             }
             Expression::Prefix(prefix, boxed_exp, _) => {
-                self.resolve_prefix_expr_type(prefix, *boxed_exp, symbol_type)
+                self.resolve_prefix_expr_type(prefix, *boxed_exp, left)
             }
-            Expression::Infix(_, boxed_exp, _, _) => {
-                self.resolve_expr_type(*boxed_exp, symbol_type)
-            }
-            Expression::Sufix(_, boxed_exp, _) => self.resolve_expr_type(*boxed_exp, symbol_type),
+            Expression::Infix(_, boxed_exp, _, _) => self.resolve_expr_type(*boxed_exp, left),
+            Expression::Sufix(_, boxed_exp, _) => self.resolve_expr_type(*boxed_exp, left),
             Expression::Function {
                 parameter_symbols,
                 body,
                 return_type,
                 ..
-            } => self.resolve_function(parameter_symbols, body, return_type),
+            } => self.resolve_function(parameter_symbols, body, return_type, left),
             _ => unreachable!(),
         }
     }
 
-    pub fn resolve_current_ident(
-        &mut self,
-        ident: String,
-        symbol_type: SymbolType,
-    ) -> Result<SymbolType> {
+    pub fn resolve_current_ident(&mut self, ident: String, left: SymbolType) -> Result<SymbolType> {
         let symbol_table = self.symbol_tables.last_mut().unwrap();
         match symbol_table.resolve(&ident) {
-            Ok(symbol) => self.match_symbol_type(symbol_type, symbol.symbol_type),
+            Ok(symbol) => self.match_symbol_type(left, symbol.symbol_type),
             Err(_) => Err(SymbolError::UndefinedSymbol(ident)),
         }
     }
@@ -101,11 +91,11 @@ impl Walker {
         &mut self,
         prefix: Prefix,
         expr: Expression,
-        symbol_type: SymbolType,
+        left: SymbolType,
     ) -> Result<SymbolType> {
         match prefix {
             Prefix::Bang => Ok(SymbolType::Primary(PrimaryType::Boolean)),
-            _ => self.resolve_expr_type(expr, symbol_type),
+            _ => self.resolve_expr_type(expr, left),
         }
     }
 
@@ -114,17 +104,20 @@ impl Walker {
         parameters: Vec<Box<Symbol>>,
         body: Vec<Statement>,
         return_type: SymbolType,
+        left: SymbolType,
     ) -> Result<SymbolType> {
         if let Some(last_table) = self.symbol_tables.last() {
             let new_scope = SymbolTable::new("test", Some(last_table.clone()));
             self.symbol_tables.push(new_scope);
             self.walk(body);
 
-            return Ok(SymbolType::Function(FunctionType::Definition(
+            let right = SymbolType::Function(FunctionType::Definition(
                 parameters,
                 Box::new(return_type),
                 Box::new(self.symbol_tables.pop().unwrap()),
-            )));
+            ));
+
+            return self.match_symbol_type(left, right);
         }
         unreachable!();
     }
@@ -202,6 +195,26 @@ mod tests {
             &format!(
                 "{}",
                 SymbolError::NotEqualSymbolType(String::from("int"), String::from("string"))
+            )
+        );
+    }
+
+    #[test]
+    fn not_equal_symbol_type_function() {
+        let input = r#"
+    let a: fn():int = fn(): bool {
+      return 3;
+    };
+  "#;
+        let walker = walk_ast(input);
+        assert_eq!(
+            &walker.error_stack.join(""),
+            &format!(
+                "{}",
+                SymbolError::NotEqualSymbolType(
+                    String::from("fn(): int"),
+                    String::from("fn(): bool")
+                )
             )
         );
     }
