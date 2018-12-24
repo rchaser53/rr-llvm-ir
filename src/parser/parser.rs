@@ -759,6 +759,39 @@ impl<'a> Parser<'a> {
     pub fn extract_symbol_type(&mut self) -> Result<SymbolType> {
         let token = self.cur_token.to_owned();
         match &token.token_type {
+            TokenType::Fn => {
+                if self.peek_token_is(TokenType::Lparen) == false {
+                    return Err(CompilerError::InvalidParserSyntax);
+                }
+                self.next_token()?;
+                self.next_token()?;
+
+                let symbols = if self.cur_token_is(TokenType::Rparen) {
+                    Vec::new()
+                } else {
+                    let mut symbols = Vec::new();
+                    symbols.push(Box::new(self.extract_symbol_type()?));
+
+                    while self.peek_token_is(TokenType::Comma) {
+                        self.next_token()?;
+                        symbols.push(Box::new(self.extract_symbol_type()?))
+                    }
+                    self.next_token()?;
+                    self.next_token()?;
+                    symbols
+                };
+
+                if self.cur_token_is(TokenType::Rparen) && self.peek_token_is(TokenType::Colon) {
+                    self.next_token()?;
+                    self.next_token()?;
+                    Ok(SymbolType::Function(FunctionType::Declare(
+                        symbols,
+                        Box::new(self.extract_symbol_type()?),
+                    )))
+                } else {
+                    return Err(CompilerError::InvalidParserSyntax);
+                }
+            }
             TokenType::Identifier => Ok(SymbolType::Custom(token.value.to_string())),
             TokenType::PrimaryType(parimary_type) => Ok(SymbolType::Primary(parimary_type.clone())),
             _ => Err(CompilerError::InvalidParserSyntax),
@@ -835,7 +868,7 @@ mod tests {
     }
 
     #[test]
-    fn operator_precedence_parsing() {
+    fn operator_precedence() {
         let input = r#"
     -a * b;
     !-a;
@@ -866,7 +899,7 @@ mod tests {
     }
 
     #[test]
-    fn if_else_parsing() {
+    fn if_else() {
         let input = r#"
     if(a > b) {};
     if(a > b) { return 1; };
@@ -882,7 +915,7 @@ mod tests {
     }
 
     #[test]
-    fn boolean_parsing() {
+    fn boolean() {
         let input = r#"
     true;
     false;
@@ -897,7 +930,7 @@ mod tests {
     }
 
     #[test]
-    fn array_parsing() {
+    fn array() {
         let input = r#"
     [1, 2, 3];
   "#;
@@ -906,7 +939,7 @@ mod tests {
     }
 
     #[test]
-    fn array_element_parsing() {
+    fn array_element() {
         let input = r#"
       let a: int[] = [1, 2, 3];
       a[1];
@@ -917,7 +950,7 @@ mod tests {
     }
 
     #[test]
-    fn funciton_parsing() {
+    fn funciton() {
         let input = r#"
     fn(): null {};
     fn(x: int): int {};
@@ -930,7 +963,16 @@ mod tests {
     }
 
     #[test]
-    fn call_parsing() {
+    fn declare_function() {
+        let input = r#"
+    let a: fn(): int = 1;
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let a: fn(): int = 1");
+    }
+
+    #[test]
+    fn call() {
         let input = r#"
     a + add(b * c) + d;
     add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
@@ -955,7 +997,7 @@ mod tests {
     }
 
     #[test]
-    fn sufix_parsing() {
+    fn sufix() {
         let input = r#"
       a++;
   "#;

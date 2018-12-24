@@ -190,5 +190,5 @@ fn create_function_string<T: fmt::Display>(args: &Vec<T>, return_type: &Box<Symb
         .map(|arg| format!("{}", arg))
         .collect::<Vec<String>>()
         .join(", ");
-    format!("function({}): {}", arg_types_string, return_type.string())
+    format!("fn({}): {}", arg_types_string, return_type.string())
 }
