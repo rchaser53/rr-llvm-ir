@@ -138,22 +138,6 @@ pub enum SymbolType {
     Custom(String),
 }
 
-#[derive(Clone, Eq, Hash, Debug, PartialEq)]
-pub enum PrimaryType {
-    Integer,
-    Float,
-    String,
-    Boolean,
-    Void,
-    Null,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum FunctionType {
-    Declare(Vec<Box<SymbolType>>, Box<SymbolType>),
-    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
-}
-
 impl SymbolType {
     pub fn string(&self) -> String {
         match self {
@@ -182,6 +166,22 @@ impl fmt::Display for SymbolType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.string())
     }
+}
+
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
+pub enum PrimaryType {
+    Integer,
+    Float,
+    String,
+    Boolean,
+    Void,
+    Null,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionType {
+    Declare(Vec<Box<SymbolType>>, Box<SymbolType>),
+    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
 }
 
 fn create_function_string<T: fmt::Display>(args: &Vec<T>, return_type: &Box<SymbolType>) -> String {

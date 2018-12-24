@@ -59,6 +59,10 @@ fn main() {
             }
             let mut walker = Walker::new();
             walker.walk(statements);
+
+            if walker.error_stack.len() > 0 {
+                panic!("{:?}", walker.error_stack.join(""));
+            }
         }
         Err(error) => {
             panic!("{}", error);

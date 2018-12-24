@@ -758,6 +758,7 @@ impl<'a> Parser<'a> {
 
     pub fn extract_symbol_type(&mut self) -> Result<SymbolType> {
         let token = self.cur_token.to_owned();
+
         match &token.token_type {
             TokenType::Fn => {
                 if self.peek_token_is(TokenType::Lparen) == false {
