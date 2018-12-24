@@ -202,10 +202,8 @@ impl<'a> Parser<'a> {
             ))?;
         }
         self.next_token()?;
-
-        let token = self.peek_token.to_owned();
-        let base_type = self.extract_symbol_type(token)?;
         self.next_token()?;
+        let base_type = self.extract_symbol_type()?;
 
         if self.peek_token_is(TokenType::Lbracket) == false {
             return Ok(base_type);
@@ -480,9 +478,7 @@ impl<'a> Parser<'a> {
         }
         self.next_token()?;
 
-        symbols.push(Box::new(
-            self.extract_symbol(name, self.cur_token.to_owned())?,
-        ));
+        symbols.push(Box::new(self.extract_symbol(name)?));
 
         while self.peek_token_is(TokenType::Comma) {
             self.next_token()?;
@@ -492,11 +488,9 @@ impl<'a> Parser<'a> {
             if self.expect_peek(TokenType::Colon)? == false {
                 self.emit_error_for_funciton()?;
             }
-            symbols.push(Box::new(
-                self.extract_symbol(name, self.peek_token.to_owned())?,
-            ));
 
             self.next_token()?;
+            symbols.push(Box::new(self.extract_symbol(name)?));
         }
 
         if self.expect_peek(TokenType::Rparen)? == false {
@@ -511,9 +505,8 @@ impl<'a> Parser<'a> {
             self.emit_error_for_funciton()?;
         }
 
-        let token = self.peek_token.to_owned();
         self.next_token()?;
-        Ok(self.extract_symbol_type(token)?)
+        Ok(self.extract_symbol_type()?)
     }
 
     pub fn parse_identifier(&mut self) -> Result<Expression> {
@@ -759,11 +752,12 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub fn extract_symbol(&mut self, name: String, token: Token) -> Result<Symbol> {
-        Ok(Symbol::new(&name, self.extract_symbol_type(token)?, false))
+    pub fn extract_symbol(&mut self, name: String) -> Result<Symbol> {
+        Ok(Symbol::new(&name, self.extract_symbol_type()?, false))
     }
 
-    pub fn extract_symbol_type(&mut self, token: Token) -> Result<SymbolType> {
+    pub fn extract_symbol_type(&mut self) -> Result<SymbolType> {
+        let token = self.cur_token.to_owned();
         match &token.token_type {
             TokenType::Identifier => Ok(SymbolType::Custom(token.value.to_string())),
             TokenType::PrimaryType(parimary_type) => Ok(SymbolType::Primary(parimary_type.clone())),
