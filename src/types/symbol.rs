@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 use std::rc::Weak;
 
@@ -105,18 +106,16 @@ impl Symbol {
             SymbolType::Primary(PrimaryType::Void) => format!("{}: void", name),
             SymbolType::Primary(PrimaryType::Null) => format!("{}: null", name),
             SymbolType::Array(boxed_type) => format!("{}: {}[]", name, boxed_type.string()),
-            SymbolType::Function(args, return_type, _) => {
-                let arg_types_string: String = args
-                    .iter()
-                    .map(|arg| arg.string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                format!(
-                    "{}: function({}): {}",
-                    name,
-                    arg_types_string,
-                    return_type.string()
-                )
+            SymbolType::Function(function_type) => {
+                let function_string = match function_type {
+                    FunctionType::Declare(args, return_type) => {
+                        create_function_string(args, return_type)
+                    }
+                    FunctionType::Definition(args, return_type, _) => {
+                        create_function_string(args, return_type)
+                    }
+                };
+                format!("{}: {}", name, function_string)
             }
             SymbolType::Scope(scope) => format!("scope: {}", scope.scope_name),
             SymbolType::Custom(custom_name) => format!("{}: {}", name, custom_name),
@@ -124,11 +123,17 @@ impl Symbol {
     }
 }
 
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.string())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum SymbolType {
     Primary(PrimaryType),
     Array(Box<SymbolType>),
-    Function(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
+    Function(FunctionType),
     Scope(Box<SymbolTable>),
     Custom(String),
 }
@@ -143,6 +148,12 @@ pub enum PrimaryType {
     Null,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionType {
+    Declare(Vec<Box<SymbolType>>, Box<SymbolType>),
+    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
+}
+
 impl SymbolType {
     pub fn string(&self) -> String {
         match self {
@@ -153,16 +164,31 @@ impl SymbolType {
             SymbolType::Primary(PrimaryType::Void) => String::from("void"),
             SymbolType::Primary(PrimaryType::Null) => String::from("null"),
             SymbolType::Array(boxed_type) => format!("{}[]", boxed_type.string()),
-            SymbolType::Function(args, return_type, _) => {
-                let arg_types_string: String = args
-                    .iter()
-                    .map(|arg| arg.string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                format!("function({}): {}", arg_types_string, return_type.string())
-            }
+            SymbolType::Function(function_type) => match function_type {
+                FunctionType::Declare(args, return_type) => {
+                    create_function_string(args, return_type)
+                }
+                FunctionType::Definition(args, return_type, _) => {
+                    create_function_string(args, return_type)
+                }
+            },
             SymbolType::Scope(scope) => scope.scope_name.to_string(),
             SymbolType::Custom(name) => name.to_string(),
         }
     }
+}
+
+impl fmt::Display for SymbolType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.string())
+    }
+}
+
+fn create_function_string<T: fmt::Display>(args: &Vec<T>, return_type: &Box<SymbolType>) -> String {
+    let arg_types_string: String = args
+        .iter()
+        .map(|arg| format!("{}", arg))
+        .collect::<Vec<String>>()
+        .join(", ");
+    format!("function({}): {}", arg_types_string, return_type.string())
 }

@@ -101,11 +101,11 @@ impl Walker {
             self.symbol_tables.push(new_scope);
             self.walk(body);
 
-            return Ok(SymbolType::Function(
+            return Ok(SymbolType::Function(FunctionType::Definition(
                 parameters,
                 Box::new(return_type),
                 Box::new(self.symbol_tables.pop().unwrap()),
-            ));
+            )));
         }
         unreachable!();
     }
