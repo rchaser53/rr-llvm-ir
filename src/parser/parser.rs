@@ -91,7 +91,10 @@ impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program> {
         let mut program = Vec::new();
         while self.peek_token.token_type != TokenType::Null {
-            program.push(self.parse_statement()?);
+            match self.parse_statement() {
+                Ok(statement) => program.push(statement),
+                Err(err) => self.errors.push(format!("{}", err)),
+            };
             self.next_token()?;
         }
         Ok(program)
