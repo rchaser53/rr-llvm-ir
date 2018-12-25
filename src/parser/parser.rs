@@ -197,9 +197,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_identifier_symbol_type(&mut self) -> Result<SymbolType> {
         if self.peek_token_is(TokenType::Colon) == false {
-            return Err(CompilerError::DeclareType(
-                self.peek_token.value.to_string(),
-            ))?;
+            return self.no_declare_error::<SymbolType>();
         }
         self.next_token()?;
         self.next_token()?;
@@ -474,7 +472,7 @@ impl<'a> Parser<'a> {
 
         self.next_token()?;
         if self.expect_peek(TokenType::Colon)? == false {
-            self.emit_error_for_funciton()?;
+            self.no_declare_error()?;
         }
         self.next_token()?;
 
@@ -486,7 +484,7 @@ impl<'a> Parser<'a> {
             let name = self.cur_token.value.to_string();
 
             if self.expect_peek(TokenType::Colon)? == false {
-                self.emit_error_for_funciton()?;
+                self.no_declare_error()?;
             }
 
             self.next_token()?;
@@ -502,11 +500,11 @@ impl<'a> Parser<'a> {
 
     pub fn parse_return_type(&mut self) -> Result<SymbolType> {
         if self.expect_peek(TokenType::Colon)? == false {
-            self.emit_error_for_funciton()?;
+            self.no_declare_error::<SymbolType>()
+        } else {
+            self.next_token()?;
+            self.extract_symbol_type()
         }
-
-        self.next_token()?;
-        Ok(self.extract_symbol_type()?)
     }
 
     pub fn parse_identifier(&mut self) -> Result<Expression> {
@@ -736,13 +734,10 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub fn peek_error(&mut self, token: Token) -> Result<()> {
-        self.errors.push(format!(
-            "expected next token to be {:?} instead. row: {}",
-            token.token_type, token.current_row
-        ));
+    pub fn no_declare_error<T>(&mut self) -> Result<T> {
+        let value = self.cur_token.value.to_string();
         self.skip_until_semicolon()?;
-        Ok(())
+        Err(CompilerError::DeclareType(value))
     }
 
     pub fn skip_until_semicolon(&mut self) -> Result<()> {
@@ -790,7 +785,7 @@ impl<'a> Parser<'a> {
                         Box::new(self.extract_symbol_type()?),
                     )))
                 } else {
-                    return Err(CompilerError::InvalidParserSyntax);
+                    self.no_declare_error::<SymbolType>()
                 }
             }
             TokenType::Identifier => Ok(SymbolType::Custom(token.value.to_string())),
@@ -1008,5 +1003,19 @@ mod tests {
   "#;
         let program = parse_input(input).unwrap();
         statement_assert(&program[0], "(a++)");
+    }
+
+    #[test]
+    fn no_declare_type() {
+        let input = r#"
+      let a = 3;
+  "#;
+        let _ = parse_and_emit_error(
+            input,
+            vec![&format!(
+                "{}",
+                CompilerError::DeclareType(String::from("a"))
+            )],
+        );
     }
 }

@@ -16,6 +16,12 @@ pub enum CompilerError {
 
     #[fail(display = "invalid syntax for parser")]
     InvalidParserSyntax,
+
+    #[fail(display = "no prefix parse function for {:?}. row: {}", _0, _1)]
+    NoPrefixError(TokenType, usize),
+
+    #[fail(display = "debug error.\ncurrent: {:?}\npeek: {:?}", _0, _1)]
+    DebugError(Token, Token),
 }
 
 pub type Result<T> = result::Result<T, CompilerError>;
