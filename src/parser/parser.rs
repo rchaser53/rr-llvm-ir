@@ -692,13 +692,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expect_peek(&mut self, token_type: TokenType) -> Result<bool> {
-        Ok(if self.peek_token_is(token_type) {
+        if self.peek_token_is(token_type) {
             self.next_token()?;
-            true
+            Ok(true)
         } else {
-            self.peek_error(self.peek_token.clone())?;
-            false
-        })
+            let cur_token = self.cur_token.to_owned();
+            let peek_token = self.peek_token.to_owned();
+            self.skip_until_semicolon()?;
+            Err(CompilerError::DebugError(cur_token, peek_token))
+        }
     }
 
     pub fn peek_token_is(&mut self, token_type: TokenType) -> bool {
@@ -729,12 +731,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn no_prefix_parse_fn_error(&mut self, token: Token) -> Result<()> {
-        self.errors.push(format!(
-            "no prefix parse function for {:?}. row: {}",
-            token.token_type, token.current_row
-        ));
         self.skip_until_semicolon()?;
-        Ok(())
+        Err(CompilerError::NoPrefixError(
+            token.token_type,
+            token.current_row,
+        ))
     }
 
     pub fn no_declare_error<T>(&mut self) -> Result<T> {
@@ -800,6 +801,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::lexer::lexer::*;
+    use crate::lexer::token::*;
     use crate::parser::test_utils::*;
 
     #[test]
@@ -996,7 +999,13 @@ mod tests {
 
       return > 3;
     "#;
-        let _ = parse_and_emit_error(input, vec!["no prefix parse function for Gt. row: 2"]);
+        let _ = parse_and_emit_error(
+            input,
+            vec![&format!(
+                "{}",
+                CompilerError::NoPrefixError(TokenType::Gt, 2),
+            )],
+        );
     }
 
     #[test]
