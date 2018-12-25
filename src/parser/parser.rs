@@ -746,7 +746,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn skip_until_semicolon(&mut self) -> Result<()> {
-        while self.peek_token_is(TokenType::Semicolon) {
+        while self.cur_token_is(TokenType::Semicolon) == false {
             self.next_token()?;
         }
         Ok(())
