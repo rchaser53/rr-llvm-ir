@@ -101,9 +101,9 @@ impl Walker {
 
     pub fn resolve_function(
         &mut self,
-        parameters: Vec<Box<Symbol>>,
+        right_parameters: Vec<Box<Symbol>>,
         body: Vec<Statement>,
-        return_type: SymbolType,
+        right_return_type: SymbolType,
         left: SymbolType,
     ) -> Result<SymbolType> {
         if let Some(last_table) = self.symbol_tables.last() {
@@ -111,13 +111,39 @@ impl Walker {
             self.symbol_tables.push(new_scope);
             self.walk(body);
 
+            let validaton_result = if let SymbolType::Function(ref function_type) = left {
+                if let FunctionType::Declare(left_parameter_types, left_return_type) =
+                    function_type.clone()
+                {
+                    let right_parameter_types: Vec<Box<SymbolType>> = right_parameters
+                        .clone()
+                        .into_iter()
+                        .map(|parameter| Box::new(parameter.symbol_type))
+                        .collect::<Vec<_>>();
+
+                    left_parameter_types == right_parameter_types
+                        && *left_return_type == right_return_type
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
             let right = SymbolType::Function(FunctionType::Definition(
-                parameters,
-                Box::new(return_type),
+                right_parameters,
+                Box::new(right_return_type),
                 Box::new(self.symbol_tables.pop().unwrap()),
             ));
 
-            return self.match_symbol_type(left, right);
+            if validaton_result == false {
+                return Err(SymbolError::NotEqualSymbolType(
+                    left.string(),
+                    right.string(),
+                ));
+            }
+
+            return Ok(right);
         }
         unreachable!();
     }
@@ -196,6 +222,20 @@ mod tests {
                 "{}",
                 SymbolError::NotEqualSymbolType(String::from("int"), String::from("string"))
             )
+        );
+    }
+
+    #[test]
+    fn symbol_type_function() {
+        let input = r#"
+    let a: fn(int, string, bool):int = fn(a: int, b: string, c: bool): int {
+      return 3;
+    };
+  "#;
+        let tables = walk_ast(input).symbol_tables;
+        assert_symbol_tables(
+            &tables[0].resolve("a").unwrap(),
+            "a: fn(a: int, b: string, c: bool): int",
         );
     }
 
