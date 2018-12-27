@@ -107,6 +107,7 @@ impl<'a> Parser<'a> {
             TokenType::Return => self.parse_return_statement()?,
             TokenType::While => self.parse_while_statement()?,
             TokenType::If => self.parse_if_statement()?,
+            TokenType::Lbrace => self.parse_scope()?,
             _ => self.parse_expression_statement()?,
         })
     }
@@ -305,6 +306,17 @@ impl<'a> Parser<'a> {
             self.next_token()?;
         }
         Ok(block)
+    }
+
+    pub fn parse_scope(&mut self) -> Result<Statement> {
+        self.next_token()?;
+        let statement = self.parse_statement()?;
+
+        if self.expect_peek(TokenType::Rbrace)? == true {
+            Ok(Statement::Scope(Box::new(statement)))
+        } else {
+            return Err(CompilerError::InvalidParserSyntax);
+        }
     }
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement> {
@@ -945,6 +957,17 @@ mod tests {
         let program = parse_input(input).unwrap();
         statement_assert(&program[0], "let a: int[] = [1, 2, 3]");
         statement_assert(&program[1], "a[1]");
+    }
+
+    #[test]
+    fn scope() {
+        let input = r#"
+      {
+        let a: int = 3;
+      };
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "{ let a: int = 3 }");
     }
 
     #[test]
