@@ -6,11 +6,7 @@ pub enum Statement {
     Let(Identifier, Expression, SymbolType),
     Return(Expression),
     Expression(Expression),
-    If {
-        conditions: Vec<Expression>,
-        bodies: Vec<BlockStatement>,
-        location: Location,
-    },
+    If(Vec<Expression>, Vec<BlockStatement>, Location),
     While(Expression, BlockStatement),
     Assignment(Identifier, Expression),
     AssignmentAggregate(Identifier, Expression, Expression),
@@ -30,11 +26,7 @@ impl Statement {
             ),
             Statement::Return(expr) => ("return ".to_owned() + &expr.string()).to_string(),
             Statement::Expression(expr) => expr.string(),
-            Statement::If {
-                conditions,
-                bodies,
-                location: _,
-            } => {
+            Statement::If(conditions, bodies, _) => {
                 let condition_strings = conditions.iter().map(|s| s.string()).collect::<Vec<_>>();
 
                 let body_strings = bodies.iter().fold(Vec::new(), |mut stack, body| {

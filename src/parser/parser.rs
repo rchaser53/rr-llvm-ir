@@ -293,11 +293,7 @@ impl<'a> Parser<'a> {
             self.next_token()?;
         }
 
-        Ok(Statement::If {
-            conditions: condtions,
-            bodies: bodies,
-            location: Location::new(if_row),
-        })
+        Ok(Statement::If(condtions, bodies, Location::new(if_row)))
     }
 
     pub fn parse_block_statement(&mut self) -> Result<BlockStatement> {
