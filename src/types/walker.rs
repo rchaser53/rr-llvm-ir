@@ -17,13 +17,7 @@ pub struct Walker {
 impl Walker {
     pub fn new() -> Walker {
         Walker {
-            symbol_tables: vec![
-              Rc::new(
-                RefCell::new(
-                  SymbolTable::new("global", None)
-                )
-              )
-            ],
+            symbol_tables: vec![Rc::new(RefCell::new(SymbolTable::new("global", None)))],
             error_stack: Vec::new(),
         }
     }
@@ -42,11 +36,13 @@ impl Walker {
         }
     }
 
-    pub fn walk_scoped_statement(&mut self, boxed_statement: Box<Statement>) {
+    pub fn walk_scoped_statement(&mut self, boxed_statements: Vec<Box<Statement>>) {
         if let Some(last_table) = self.symbol_tables.last() {
             let new_scope = SymbolTable::new("test", Some(Rc::clone(last_table)));
             self.symbol_tables.push(Rc::new(RefCell::new(new_scope)));
-            self.walk_statement(*boxed_statement);
+            for boxed in boxed_statements.into_iter() {
+                self.walk_statement(*boxed);
+            }
             self.symbol_tables.pop();
         } else {
             unreachable!();
@@ -58,8 +54,11 @@ impl Walker {
         match self.resolve_expr_type(expr, left) {
             Ok(symbol_type) => {
                 if let Some(table) = self.symbol_tables.last_mut() {
-                    if let Err(err) = table.borrow_mut().define(ident_name, Symbol::new(ident_name, symbol_type, false)) {
-                      self.error_stack.push(format!("{}", err));
+                    if let Err(err) = table
+                        .borrow_mut()
+                        .define(ident_name, Symbol::new(ident_name, symbol_type, false))
+                    {
+                        self.error_stack.push(format!("{}", err));
                     }
                 }
             }
@@ -128,13 +127,7 @@ impl Walker {
     ) -> Result<SymbolType> {
         if let Some(last_table) = self.symbol_tables.last() {
             let new_scope = SymbolTable::new("test", Some(last_table.clone()));
-            self.symbol_tables.push(
-              Rc::new(
-                RefCell::new(
-                  new_scope
-                )
-              )
-            );
+            self.symbol_tables.push(Rc::new(RefCell::new(new_scope)));
             self.walk(body);
 
             let validaton_result = if let SymbolType::Function(ref function_type) = left {
