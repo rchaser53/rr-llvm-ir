@@ -28,7 +28,19 @@ impl Walker {
     pub fn walk_statement(&mut self, statement: Statement) {
         match statement {
             Statement::Let(ident, expr, symbol_type) => self.walk_let(ident, expr, symbol_type),
+            Statement::Scope(scoped_statement) => self.walk_scoped_statement(scoped_statement),
             _ => {}
+        }
+    }
+
+    pub fn walk_scoped_statement(&mut self, boxed_statement: Box<Statement>) {
+        if let Some(last_table) = self.symbol_tables.last() {
+            let new_scope = SymbolTable::new("test", Some(last_table.clone()));
+            self.symbol_tables.push(new_scope);
+            self.walk_statement(*boxed_statement);
+            self.symbol_tables.pop();
+        } else {
+            unreachable!();
         }
     }
 
@@ -207,6 +219,28 @@ mod tests {
         assert_eq!(
             &walker.error_stack.join(""),
             &format!("{}", SymbolError::AlreadyUsedSymbol(String::from("a")))
+        );
+    }
+
+    #[test]
+    fn nest_let() {
+        let input = r#"
+    let b: int = 0;
+    {
+      let a: int = 1;
+    }
+    {
+      let a: int = 1;
+      let b: int = 0;
+    }
+  "#;
+        let walker = walk_ast(input);
+        assert_eq!(
+            &walker.error_stack.join(""),
+            &format!(
+                "{}",
+                &format!("{}", SymbolError::AlreadyUsedSymbol(String::from("b")))
+            )
         );
     }
 
