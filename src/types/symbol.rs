@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -7,7 +8,7 @@ use crate::types::error::*;
 
 #[derive(Clone, Debug)]
 pub struct SymbolTable {
-    pub enclosing_scope: Weak<SymbolTable>,
+    pub enclosing_scope: Weak<RefCell<SymbolTable>>,
     pub symbols: HashMap<String, Symbol>,
     pub scope_name: String,
 }
@@ -19,10 +20,9 @@ impl PartialEq for SymbolTable {
 }
 
 impl SymbolTable {
-    pub fn new(name: &str, scope: Option<SymbolTable>) -> Self {
+    pub fn new(name: &str, scope: Option<Rc<RefCell<SymbolTable>>>) -> Self {
         let enclosing_scope = if let Some(actual_scope) = scope {
-            let scope = Rc::new(actual_scope);
-            Rc::downgrade(&scope)
+            Rc::downgrade(&actual_scope)
         } else {
             Weak::new()
         };
@@ -66,7 +66,7 @@ impl SymbolTable {
         };
 
         if let Some(upgraded) = self.enclosing_scope.upgrade() {
-            upgraded.resolve(name)
+            upgraded.borrow().resolve(name)
         } else {
             Err(SymbolError::UndefinedSymbol(name.to_string()))
         }
@@ -178,7 +178,7 @@ pub enum PrimaryType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionType {
     Declare(Vec<Box<SymbolType>>, Box<SymbolType>),
-    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<SymbolTable>),
+    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<Rc<RefCell<SymbolTable>>>),
 }
 
 fn create_function_string<T: fmt::Display>(args: &Vec<T>, return_type: &Box<SymbolType>) -> String {

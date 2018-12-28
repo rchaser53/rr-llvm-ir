@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::types::error::*;
 use crate::types::symbol::*;
 
@@ -7,14 +10,20 @@ use crate::parser::statements::*;
 
 #[derive(Debug)]
 pub struct Walker {
-    pub symbol_tables: Vec<SymbolTable>,
+    pub symbol_tables: Vec<Rc<RefCell<SymbolTable>>>,
     pub error_stack: Vec<String>,
 }
 
 impl Walker {
     pub fn new() -> Walker {
         Walker {
-            symbol_tables: vec![SymbolTable::new("global", None)],
+            symbol_tables: vec![
+              Rc::new(
+                RefCell::new(
+                  SymbolTable::new("global", None)
+                )
+              )
+            ],
             error_stack: Vec::new(),
         }
     }
@@ -35,8 +44,8 @@ impl Walker {
 
     pub fn walk_scoped_statement(&mut self, boxed_statement: Box<Statement>) {
         if let Some(last_table) = self.symbol_tables.last() {
-            let new_scope = SymbolTable::new("test", Some(last_table.clone()));
-            self.symbol_tables.push(new_scope);
+            let new_scope = SymbolTable::new("test", Some(Rc::clone(last_table)));
+            self.symbol_tables.push(Rc::new(RefCell::new(new_scope)));
             self.walk_statement(*boxed_statement);
             self.symbol_tables.pop();
         } else {
@@ -49,11 +58,9 @@ impl Walker {
         match self.resolve_expr_type(expr, left) {
             Ok(symbol_type) => {
                 if let Some(table) = self.symbol_tables.last_mut() {
-                    let _ = table
-                        .define(ident_name, Symbol::new(ident_name, symbol_type, false))
-                        .map_err(|err| {
-                            self.error_stack.push(format!("{}", err));
-                        });
+                    if let Err(err) = table.borrow_mut().define(ident_name, Symbol::new(ident_name, symbol_type, false)) {
+                      self.error_stack.push(format!("{}", err));
+                    }
                 }
             }
             Err(err) => {
@@ -93,7 +100,8 @@ impl Walker {
 
     pub fn resolve_current_ident(&mut self, ident: String, left: SymbolType) -> Result<SymbolType> {
         let symbol_table = self.symbol_tables.last_mut().unwrap();
-        match symbol_table.resolve(&ident) {
+        let result = symbol_table.borrow().resolve(&ident);
+        match result {
             Ok(symbol) => self.match_symbol_type(left, symbol.symbol_type),
             Err(_) => Err(SymbolError::UndefinedSymbol(ident)),
         }
@@ -120,7 +128,13 @@ impl Walker {
     ) -> Result<SymbolType> {
         if let Some(last_table) = self.symbol_tables.last() {
             let new_scope = SymbolTable::new("test", Some(last_table.clone()));
-            self.symbol_tables.push(new_scope);
+            self.symbol_tables.push(
+              Rc::new(
+                RefCell::new(
+                  new_scope
+                )
+              )
+            );
             self.walk(body);
 
             let validaton_result = if let SymbolType::Function(ref function_type) = left {
@@ -195,7 +209,7 @@ mod tests {
     let a: int = 1;
   "#;
         let tables = walk_ast(input).symbol_tables;
-        assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
+        assert_symbol_tables(&tables[0].borrow().resolve("a").unwrap(), "a: int");
     }
 
     #[test]
@@ -205,8 +219,8 @@ mod tests {
     let b: int = a;
   "#;
         let tables = walk_ast(input).symbol_tables;
-        assert_symbol_tables(&tables[0].resolve("a").unwrap(), "a: int");
-        assert_symbol_tables(&tables[0].resolve("b").unwrap(), "b: int");
+        assert_symbol_tables(&tables[0].borrow().resolve("a").unwrap(), "a: int");
+        assert_symbol_tables(&tables[0].borrow().resolve("b").unwrap(), "b: int");
     }
 
     #[test]
@@ -268,7 +282,7 @@ mod tests {
   "#;
         let tables = walk_ast(input).symbol_tables;
         assert_symbol_tables(
-            &tables[0].resolve("a").unwrap(),
+            &tables[0].borrow().resolve("a").unwrap(),
             "a: fn(a: int, b: string, c: bool): int",
         );
     }
