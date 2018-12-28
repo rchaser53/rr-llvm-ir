@@ -310,13 +310,12 @@ impl<'a> Parser<'a> {
 
     pub fn parse_scope(&mut self) -> Result<Statement> {
         self.next_token()?;
-        let statement = self.parse_statement()?;
-
-        if self.expect_peek(TokenType::Rbrace)? == true {
-            Ok(Statement::Scope(Box::new(statement)))
-        } else {
-            return Err(CompilerError::InvalidParserSyntax);
+        let mut statemnets = Vec::new();
+        while self.cur_token_is(TokenType::Rbrace) == false {
+            statemnets.push(Box::new(self.parse_statement()?));
+            self.next_token()?;
         }
+        Ok(Statement::Scope(statemnets))
     }
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement> {
@@ -968,6 +967,24 @@ mod tests {
   "#;
         let program = parse_input(input).unwrap();
         statement_assert(&program[0], "{ let a: int = 3 }");
+    }
+
+    #[test]
+    fn scope_and_global() {
+        let input = r#"
+    let c: int = 1;
+    {
+      let a: int = 2;
+      let b: int = 3;
+    }
+    {
+      let a: int = 4;
+    }
+  "#;
+        let program = parse_input(input).unwrap();
+        statement_assert(&program[0], "let c: int = 1");
+        statement_assert(&program[1], "{ let a: int = 2 let b: int = 3 }");
+        statement_assert(&program[2], "{ let a: int = 4 }");
     }
 
     #[test]

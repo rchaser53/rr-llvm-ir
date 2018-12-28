@@ -10,7 +10,7 @@ pub enum Statement {
     While(Expression, BlockStatement),
     Assignment(Identifier, Expression),
     AssignmentAggregate(Identifier, Expression, Expression),
-    Scope(Box<Statement>),
+    Scope(Vec<Box<Statement>>),
 }
 
 pub type BlockStatement = Vec<Statement>;
@@ -79,7 +79,17 @@ impl Statement {
                     &assign_expr.string()
                 )
             }
-            Statement::Scope(boxed_statement) => format!("{{ {} }}", boxed_statement.string()),
+            Statement::Scope(boxed_statements) => {
+                let mut ret_string = String::new();
+                for (index, boxed) in boxed_statements.iter().enumerate() {
+                    if index == 0 {
+                        ret_string.push_str(&format!("{}", boxed.string()));
+                    } else {
+                        ret_string.push_str(&format!(" {}", boxed.string()));
+                    }
+                }
+                format!("{{ {} }}", ret_string)
+            }
         }
     }
 }

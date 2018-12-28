@@ -178,7 +178,11 @@ pub enum PrimaryType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionType {
     Declare(Vec<Box<SymbolType>>, Box<SymbolType>),
-    Definition(Vec<Box<Symbol>>, Box<SymbolType>, Box<Rc<RefCell<SymbolTable>>>),
+    Definition(
+        Vec<Box<Symbol>>,
+        Box<SymbolType>,
+        Box<Rc<RefCell<SymbolTable>>>,
+    ),
 }
 
 fn create_function_string<T: fmt::Display>(args: &Vec<T>, return_type: &Box<SymbolType>) -> String {

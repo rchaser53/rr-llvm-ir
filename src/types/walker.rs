@@ -239,23 +239,15 @@ mod tests {
     #[test]
     fn nest_let() {
         let input = r#"
-    let b: int = 0;
     {
       let a: int = 1;
     }
     {
       let a: int = 1;
-      let b: int = 0;
     }
   "#;
         let walker = walk_ast(input);
-        assert_eq!(
-            &walker.error_stack.join(""),
-            &format!(
-                "{}",
-                &format!("{}", SymbolError::AlreadyUsedSymbol(String::from("b")))
-            )
-        );
+        assert_eq!(walker.error_stack.len(), 0);
     }
 
     #[test]
