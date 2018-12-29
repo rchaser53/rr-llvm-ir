@@ -12,6 +12,7 @@ use crate::parser::statements::*;
 pub struct Walker {
     pub symbol_tables: Vec<Rc<RefCell<SymbolTable>>>,
     pub error_stack: Vec<String>,
+    pub table_id: usize,
 }
 
 impl Walker {
@@ -19,6 +20,7 @@ impl Walker {
         Walker {
             symbol_tables: vec![Rc::new(RefCell::new(SymbolTable::new("global", None)))],
             error_stack: Vec::new(),
+            table_id: 0,
         }
     }
 
@@ -37,16 +39,31 @@ impl Walker {
     }
 
     pub fn walk_scoped_statement(&mut self, boxed_statements: Vec<Box<Statement>>) {
-        if let Some(last_table) = self.symbol_tables.last() {
-            let new_scope = SymbolTable::new("test", Some(Rc::clone(last_table)));
-            self.symbol_tables.push(Rc::new(RefCell::new(new_scope)));
-            for boxed in boxed_statements.into_iter() {
-                self.walk_statement(*boxed);
-            }
-            self.symbol_tables.pop();
-        } else {
-            unreachable!();
+        let new_scope = {
+            let last_table = self.symbol_tables.last_mut().unwrap();
+            SymbolTable::new("test", Some(last_table.clone()))
+        };
+        self.symbol_tables.push(Rc::new(RefCell::new(new_scope)));
+
+        for boxed in boxed_statements.into_iter() {
+            self.walk_statement(*boxed);
         }
+
+        let scope_name = format!("scoped{}", self.table_id);
+        self.table_id += 1;
+
+        let symbol = Symbol::new(
+            &scope_name,
+            SymbolType::Scope(Rc::clone(&self.symbol_tables.pop().unwrap())),
+            false,
+        );
+        let last_table = self.symbol_tables.last_mut().unwrap();
+        let _ = last_table
+            .borrow_mut()
+            .define(&scope_name, symbol)
+            .map_err(|err| {
+                panic!("scope duplicated: {}", err);
+            });
     }
 
     pub fn walk_let(&mut self, ident: Identifier, expr: Expression, left: SymbolType) {

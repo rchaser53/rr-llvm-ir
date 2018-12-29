@@ -117,6 +117,7 @@ impl Symbol {
                 };
                 format!("{}: {}", name, function_string)
             }
+            SymbolType::Scope(scope) => format!("scope: {}", scope.borrow().scope_name),
             SymbolType::Custom(custom_name) => format!("{}: {}", name, custom_name),
         }
     }
@@ -133,6 +134,7 @@ pub enum SymbolType {
     Primary(PrimaryType),
     Array(Box<SymbolType>),
     Function(FunctionType),
+    Scope(Rc<RefCell<SymbolTable>>),
     Custom(String),
 }
 
@@ -154,6 +156,7 @@ impl SymbolType {
                     create_function_string(args, return_type)
                 }
             },
+            SymbolType::Scope(scope) => scope.borrow().scope_name.to_string(),
             SymbolType::Custom(name) => name.to_string(),
         }
     }
