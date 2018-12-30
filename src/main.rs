@@ -23,6 +23,9 @@ use parser::parser::*;
 mod types;
 use types::walker::*;
 
+mod evaluate;
+use evaluate::creator::*;
+
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";
 
@@ -63,6 +66,8 @@ fn main() {
             if walker.error_stack.len() > 0 {
                 panic!("{:?}", walker.error_stack.join(""));
             }
+
+            LLVMCreator::new("test_module");
         }
         Err(error) => {
             panic!("{}", error);
