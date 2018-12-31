@@ -25,6 +25,7 @@ use types::walker::*;
 
 mod evaluate;
 use evaluate::creator::*;
+use evaluate::eval::*;
 
 const INPUT_FILE: &'static str = "input_file";
 const OUTPUT_FILE: &'static str = "output_file";

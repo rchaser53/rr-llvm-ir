@@ -47,57 +47,56 @@ impl LLVMCreator {
 
 #[cfg(test)]
 mod tests {
-  use inkwell::execution_engine::JitFunction;
-  use inkwell::builder::Builder;
-  use inkwell::context::Context;
-  use inkwell::module::Module;
+    use inkwell::builder::Builder;
+    use inkwell::context::Context;
+    use inkwell::execution_engine::JitFunction;
+    use inkwell::module::Module;
 
-  use inkwell::types::IntType;
-  use inkwell::values::{InstructionValue, IntValue, PointerValue};
-  use inkwell::OptimizationLevel;
-  use inkwell::targets::{InitializationConfig, Target};
+    use inkwell::targets::{InitializationConfig, Target};
+    use inkwell::types::IntType;
+    use inkwell::values::{InstructionValue, IntValue, PointerValue};
+    use inkwell::OptimizationLevel;
 
-  type SumFunc = unsafe extern "C" fn(u64, u64) -> u64;
-  
+    type SumFunc = unsafe extern "C" fn(u64, u64) -> u64;
 
-  #[test]
-  fn example_run_function() {
-      Target::initialize_native(&InitializationConfig::default()).unwrap();
+    #[test]
+    fn example_run_function() {
+        Target::initialize_native(&InitializationConfig::default()).unwrap();
 
-      let context = Context::create();
-      let module = context.create_module("test_module");
-      let builder = context.create_builder();
+        let context = Context::create();
+        let module = context.create_module("test_module");
+        let builder = context.create_builder();
 
-      create_function(&context, &module, &builder);
-      let execution_engine = module
-          .create_jit_execution_engine(OptimizationLevel::None)
-          .unwrap();
+        create_function(&context, &module, &builder);
+        let execution_engine = module
+            .create_jit_execution_engine(OptimizationLevel::None)
+            .unwrap();
 
-      unsafe {
-          let funcion_in_rust: JitFunction<SumFunc> = execution_engine.get_function("sum").unwrap();
-          assert!(3 == funcion_in_rust.call(1, 2), "test failed!");
-      };
-  }
+        unsafe {
+            let funcion_in_rust: JitFunction<SumFunc> =
+                execution_engine.get_function("sum").unwrap();
+            assert!(3 == funcion_in_rust.call(1, 2), "test failed!");
+        };
+    }
 
-  #[allow(dead_code)]
-  fn create_function(context: &Context, module: &Module, builder: &Builder) {
-      let i64_type = context.i64_type();
-      let fn_type = i64_type.fn_type(&[i64_type.into(), i64_type.into()], false);
+    #[allow(dead_code)]
+    fn create_function(context: &Context, module: &Module, builder: &Builder) {
+        let i64_type = context.i64_type();
+        let fn_type = i64_type.fn_type(&[i64_type.into(), i64_type.into()], false);
 
-      let sum = module.add_function("sum", fn_type, None);
-      let basic_block = context.append_basic_block(&sum, "entry");
-      builder.position_at_end(&basic_block);
+        let sum = module.add_function("sum", fn_type, None);
+        let basic_block = context.append_basic_block(&sum, "entry");
+        builder.position_at_end(&basic_block);
 
-      let x = sum.get_nth_param(0).unwrap().into_int_value();
-      let y = sum.get_nth_param(1).unwrap().into_int_value();
+        let x = sum.get_nth_param(0).unwrap().into_int_value();
+        let y = sum.get_nth_param(1).unwrap().into_int_value();
 
-      let int_32_type: IntType = IntType::i32_type();
-      let const_int: IntValue = int_32_type.const_int(10, false);
-      let const_int_ref: PointerValue = builder.build_alloca(int_32_type, "int_value");
-      let _: InstructionValue = builder.build_store(const_int_ref, const_int);
+        let int_32_type: IntType = IntType::i32_type();
+        let const_int: IntValue = int_32_type.const_int(10, false);
+        let const_int_ref: PointerValue = builder.build_alloca(int_32_type, "int_value");
+        let _: InstructionValue = builder.build_store(const_int_ref, const_int);
 
-      builder.build_return(Some(&builder.build_int_add(x, y, "")));
-  }
+        builder.build_return(Some(&builder.build_int_add(x, y, "")));
+    }
 
 }
-

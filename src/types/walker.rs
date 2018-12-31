@@ -30,6 +30,10 @@ impl Walker {
         }
     }
 
+    pub fn emit_symbol_tables(&mut self) -> Vec<Rc<RefCell<SymbolTable>>> {
+        self.symbol_tables.clone()
+    }
+
     pub fn walk_statement(&mut self, statement: Statement) {
         match statement {
             Statement::Let(ident, expr, symbol_type) => self.walk_let(ident, expr, symbol_type),
