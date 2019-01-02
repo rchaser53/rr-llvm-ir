@@ -1,6 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use inkwell::builder::Builder;
+use inkwell::context::Context;
+
 use crate::evaluate::creator::LLVMCreator;
 use crate::evaluate::object::*;
 
@@ -29,10 +32,8 @@ impl Eval {
     pub fn entry_eval_program(&mut self, program: Program) -> Object {
         let i64_type = self.creator.context.i64_type();
         for statement in program.into_iter() {
-            if let Some(mut obj) = self.eval_statement(statement) {
-                self.creator
-                    .builder
-                    .build_return(Some(&i64_type.const_int(1, false)));
+            if let Some(obj) = self.eval_statement(statement) {
+                build_return(&obj, &self.creator.context, &self.creator.builder);
                 return obj;
             }
         }
@@ -52,6 +53,31 @@ impl Eval {
             _ => unimplemented!(),
         }
     }
+
+    // pub fn eval_let_statement(
+    //     &mut self,
+    //     ident: Identifier,
+    //     expr_type: LLVMExpressionType,
+    //     expr: Expression,
+    //     env: &mut Environment,
+    // ) -> Object {
+    //     let mut object = self.eval_expression(expr, env);
+    //     // let llvm_type = convert_llvm_type(expr_type.clone());
+    //     let llvm_value = unwrap_object(&mut object);
+
+    //     match expr_type {
+    //         LLVMExpressionType::Function
+    //         | LLVMExpressionType::Array(_, _)
+    //         | LLVMExpressionType::String(_) => env.set(ident.0, object),
+    //         LLVMExpressionType::Call => match object {
+    //             Object::Integer(value) | Object::String(value, _) | Object::Boolean(value) => {
+    //                 self.set_value_to_identify(value, object, &ident.0, env)
+    //             }
+    //             _ => env.set(ident.0, object),
+    //         },
+    //         _ => self.set_value_to_identify(llvm_value, object, &ident.0, env),
+    //     }
+    // }
 
     pub fn accumultae_error(&mut self, obj: Object) -> Option<Object> {
         match obj {
@@ -124,3 +150,19 @@ impl Eval {
 // pub fn emit_llvm(&mut self, file_name: &str) {
 //     self.lc.emit_file(file_name);
 // }
+
+pub fn build_return(obj: &Object, context: &Context, builder: &Builder) {
+    match obj {
+        Object::Integer(_Intvalue, IntSize) => {
+            let int_type = match IntSize {
+                I1 => context.bool_type(),
+                I8 => context.i8_type(),
+                I32 => context.i32_type(),
+                I64 => context.i64_type(),
+            };
+
+            builder.build_return(Some(&int_type.const_int(1, false)));
+        }
+        _ => unimplemented!(),
+    }
+}
