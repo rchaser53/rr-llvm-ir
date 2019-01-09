@@ -153,15 +153,21 @@ impl Eval {
 
 pub fn build_return(obj: &Object, context: &Context, builder: &Builder) {
     match obj {
-        Object::Integer(_Intvalue, IntSize) => {
-            let int_type = match IntSize {
-                I1 => context.bool_type(),
-                I8 => context.i8_type(),
-                I32 => context.i32_type(),
-                I64 => context.i64_type(),
+        Object::Integer(int_value, int_size) => {
+            let int_type = match int_size {
+                IntSize::I1 => context.bool_type(),
+                IntSize::I8 => context.i8_type(),
+                IntSize::I32 => context.i32_type(),
+                IntSize::I64 => context.i64_type(),
             };
 
-            builder.build_return(Some(&int_type.const_int(1, false)));
+            let return_val = if let Some(val) = int_value.get_sign_extended_constant() {
+                val as u64
+            } else {
+                0
+            };
+
+            builder.build_return(Some(&int_type.const_int(return_val, false)));
         }
         _ => unimplemented!(),
     }
