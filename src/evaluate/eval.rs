@@ -8,6 +8,7 @@ use crate::evaluate::creator::LLVMCreator;
 use crate::evaluate::object::*;
 
 use crate::parser::statements::*;
+use crate::parser::expressions::*;
 
 use crate::types::symbol::*;
 
@@ -45,39 +46,32 @@ impl Eval {
 
     pub fn eval_statement(&mut self, statement: Statement) -> Option<Object> {
         match statement {
-            // Statement::Let(ident, expr_type, expr) => {
-            //     let obj = self.eval_let_statement(ident, expr_type, expr);
-            //     let _ = self.accumultae_error(obj);
-            //     None
-            // },
+            Statement::Let(ident, expr, symbol_type) => {
+                let obj = self.eval_let_statement(ident, expr, symbol_type);
+                let _ = self.accumultae_error(obj);
+                None
+            },
             _ => unimplemented!(),
         }
     }
 
-    // pub fn eval_let_statement(
-    //     &mut self,
-    //     ident: Identifier,
-    //     expr_type: LLVMExpressionType,
-    //     expr: Expression,
-    //     env: &mut Environment,
-    // ) -> Object {
-    //     let mut object = self.eval_expression(expr, env);
-    //     // let llvm_type = convert_llvm_type(expr_type.clone());
-    //     let llvm_value = unwrap_object(&mut object);
+    pub fn eval_let_statement(
+        &mut self,
+        ident: Identifier,
+        expr: Expression,
+        symbol_type: SymbolType,
+    ) -> Object {
+        self.eval_expression(expr)
+    }
 
-    //     match expr_type {
-    //         LLVMExpressionType::Function
-    //         | LLVMExpressionType::Array(_, _)
-    //         | LLVMExpressionType::String(_) => env.set(ident.0, object),
-    //         LLVMExpressionType::Call => match object {
-    //             Object::Integer(value) | Object::String(value, _) | Object::Boolean(value) => {
-    //                 self.set_value_to_identify(value, object, &ident.0, env)
-    //             }
-    //             _ => env.set(ident.0, object),
-    //         },
-    //         _ => self.set_value_to_identify(llvm_value, object, &ident.0, env),
-    //     }
-    // }
+    pub fn eval_expression(
+      &mut self,
+      expr: Expression,
+    ) -> Object {
+        match expr {
+          _ => Object::Null
+        }
+    }
 
     pub fn accumultae_error(&mut self, obj: Object) -> Option<Object> {
         match obj {
