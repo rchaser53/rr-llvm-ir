@@ -169,6 +169,15 @@ pub fn build_return(obj: &Object, context: &Context, builder: &Builder) {
 
             builder.build_return(Some(&int_type.const_int(return_val, false)));
         }
+        Object::Boolean(value) => {
+            let return_val = if let Some(val) = value.get_sign_extended_constant() {
+                val as u64
+            } else {
+                0
+            };
+
+            builder.build_return(Some(&context.bool_type().const_int(return_val, false)));
+        }
         _ => unimplemented!(),
     }
 }
